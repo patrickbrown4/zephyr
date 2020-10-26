@@ -1,0 +1,7 @@
+Source: https://data.bls.gov/timeseries/CUUR0000SA0
+
+Procedure
+---------
+Download input data from url above. 
+Select years from 1913--2018 and include annual averages, then download 
+.xlsx file and save at projpath+'Data/BLS/inflation_cpi_level.xlsx'.

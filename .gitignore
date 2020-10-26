@@ -1,0 +1,19 @@
+# mac stuff
+*.DS_Store
+
+# python cache files
+*.pyc
+*__pycache__/
+
+# VScode files
+.vscode/
+
+# log files
+*.log
+
+# python environment files
+env/
+
+# outputs folders
+out/
+results/
