@@ -136,7 +136,7 @@ except ValueError:
 ### INPUTS ###
 
 ### Generator cost (annualized capex + FOM)
-infile = projpath+'io/generator_fuel_assumptions.xlsx'
+infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
 defaults = zephyr.cpm.Defaults(infile)
 pvcost = 'PV_track_2030_mid'
 windcost = 'Wind_2030_mid'
@@ -152,13 +152,13 @@ runtype = 'full'
 loss_system_wind = 0.19 ### Owen Roberts NREL 20200331
 
 ### Set output file location and savenames
-outpath = (
-    projpath
-    +'io/cf-2007_2013/v08_states-LCOE-transloss-urban{}/{}x/{}/{}/{}/binned/'
+outpath = os.path.join(
+    projpath,
+    'io','cf-2007_2013','{}x','{}','{}','{}','binned',''
 ).format(
-    urban,transcostmultiplier,level,resource,
+    transcostmultiplier,level,resource,
     modelsave if (resource == 'wind') else (
-        '{}-{}t-{:.0f}az/'.format(systemtype,axis_tilt,axis_azimuth))
+        '{}-{}t-{:.0f}az'.format(systemtype,axis_tilt,axis_azimuth))
 )
 
 ###### Select wind/PV-specific parameters
@@ -167,9 +167,9 @@ if resource == 'pv':
     dcac = 1.3
 
     index_coords = 'psm3id'
-    resourcedatapath = regeodatapath+'in/NSRDB/ico9/'
+    resourcedatapath = os.path.join(regeodatapath,'in','NSRDB','ico9','')
 
-    filename_dfsites = outpath.replace('binned/','')+(
+    filename_dfsites = outpath.replace('binned'+os.sep,'')+(
         'mean-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
     ).format(
         systemtype, 
@@ -186,11 +186,11 @@ elif resource == 'wind':
     nans = 'raise'
 
     index_coords = 'rowf_colf'
-    resourcedatapath = (
-        regeodatapath+'in/WTK-HSDS/every2-offset0/timeseries/usa-halfdegbuff/')
+    resourcedatapath = os.path.join(
+        regeodatapath,'in','WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
 
     filename_dfsites = (
-        outpath.replace('binned/','')
+        outpath.replace('binned'+os.sep,'')
         + ('mean-wtkhsds,every2,offset0,onshore-{}-{}m-{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}.csv'
         ).format(modelsave, height, loss_system_wind*100, gencostannual, level, zone)
     )
@@ -236,7 +236,7 @@ dictarea = {}
 for numbreaks in range(1,maxbreaks+1):
     areafile = (
         savename_bins_lcoe
-        .replace('binned/cf-','binned/area-')
+        .replace(os.path.join('binned','cf-'),os.path.join('binned','area-'))
         .replace('NUMBREAKScfbins.csv'.format(maxbreaks), '{}cfbins.csv'.format(numbreaks))
     )
     dictarea[numbreaks] = pd.read_csv(areafile, index_col='bin_lcoe', squeeze=True).to_dict()

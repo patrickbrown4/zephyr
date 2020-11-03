@@ -25,9 +25,9 @@ datum = 'relativehumidity_2m'
 
 hsdspoint = 'hsds_maxwindspeed100m_closest' ### OR 'hsds_closest'
 
-inpath = extdatapath+'in/WTK-HSDS/every2-offset0/{}/'.format(datum)
-outpath = os.path.expanduser(
-    extdatapath+'in/WTK-HSDS/every2-offset0/timeseries/icomesh-maxwindspeed100m-onshore/')
+inpath = os.path.join(extdatapath,'in','WTK-HSDS','every2-offset0','{}',).format(datum)
+outpath = os.path.join(
+    extdatapath,'in','WTK-HSDS','every2-offset0','timeseries','icomesh-maxwindspeed100m-onshore')
     ### OR icomesh-closest-onshore
 
 #################
@@ -35,12 +35,13 @@ outpath = os.path.expanduser(
 
 os.makedirs(outpath, exist_ok=True)
 
-savename = outpath+'{}.df.p'.format(datum)
+savename = os.path.join(outpath,'{}.df.p').format(datum)
 print(savename)
 
 ### Load icomesh points
-dfpoints = pd.read_csv(
-    projpath+'io/icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9-wtkhsds_closest,maxspeed100m.csv')
+dfpoints = pd.read_csv(os.path.join(
+    projpath,'io',
+    'icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9-wtkhsds_closest,maxspeed100m.csv'))
 
 ### Shared parameters
 timeseries = pd.date_range(
@@ -67,7 +68,7 @@ for timestamp in tqdm(timeseries):
     timestring = timestamp.strftime('%Y%m%dT%H%M')
 
     ### Load the timeslice
-    filename = '{}{}.npy.gz'.format(
+    filename = os.path.join('{}','{}.npy.gz').format(
         inpath, timestring)
     with gzip.open(filename, 'rb') as p:
         array = np.load(p)

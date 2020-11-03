@@ -49,7 +49,8 @@ except ValueError:
 ### INPUTS ###
 
 zonesource = 'state'
-usafile = datapath+'Maps/HIFLD/Political_Boundaries_Area/Political_Boundaries_Area.shp'
+usafile = os.path.join(
+    datapath,'Maps','HIFLD','Political_Boundaries_Area','Political_Boundaries_Area.shp')
 dfzones = gpd.read_file(usafile)
 
 dfzones = dfzones.loc[
@@ -128,9 +129,9 @@ print(zone)
 ### savename
 savename = 'polyavailable-water,parks,native,mountains,urban-{}_{}.poly.p'.format(
     zonesource, zone)
-outpath = projpath+'io/geo/developable-area/{}/'.format(zonesource)
+outpath = os.path.join(projpath,'io','geo','developable-area','{}').format(zonesource) + os.sep
 os.makedirs(outpath, exist_ok=True)
-print(outpath+savename)
+print(os.path.join(outpath,savename))
 
 
 ### Get zone polygon
@@ -159,9 +160,8 @@ dfoutside = gpd.GeoDataFrame(geometry=[outside])
 
 ###### Urban areas
 ### Load urban shapefile
-dfurban_all = gpd.read_file(
-    datapath+'Maps/Census/urbanarea/'
-    'tl_2010_us_uac10/tl_2010_us_uac10.shp')
+dfurban_all = gpd.read_file(os.path.join(
+    datapath,'Maps','Census','urbanarea','tl_2010_us_uac10','tl_2010_us_uac10.shp'))
 
 dfurban_states = dfurban_all.loc[
     dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in neighborstates[zone])
@@ -178,8 +178,8 @@ polyurban = polyurban.intersection(regionbox).buffer(0.)
 print('imported urban')
 
 ###### Native American territories
-dfnative_all = gpd.read_file(
-    datapath+'Maps/Census/tl_2017_us_aitsn/tl_2017_us_aitsn.shp')
+dfnative_all = gpd.read_file(os.path.join(
+    datapath,'Maps','Census','tl_2017_us_aitsn','tl_2017_us_aitsn.shp'))
 ## Filter out the Oklahoma Tribal Statistical areas
 dfnative = dfnative_all.loc[dfnative_all.FUNCSTAT != 'S'].copy()
 dfnative['dummy'] = 0
@@ -190,7 +190,7 @@ polynative = polynative.intersection(regionbox).buffer(0.)
 print('imported native')
 
 ###### National parks
-with open(projpath+'io/geo/nationalparks-all-poly.p', 'rb') as p:
+with open(os.path.join(projpath,'io','geo','nationalparks-all-poly.p'), 'rb') as p:
     polyparks = pickle.load(p)
 
 polyparks = polyparks.intersection(regionbox).buffer(0.)
@@ -199,8 +199,8 @@ parks = gpd.GeoDataFrame(geometry=[polyparks])
 print('imported parks')
 
 ###### Water bodies
-water = gpd.read_file(
-    datapath+'/Maps/USGS/wtrbdyp010g.shp_nt00886/wtrbdyp010g.shp')
+water = gpd.read_file(os.path.join(
+    datapath,'Maps','USGS','wtrbdyp010g.shp_nt00886','wtrbdyp010g.shp'))
 
 water = water.loc[
     ~water.State.isin(['AK','HI','PR','VI','GU'])
@@ -221,9 +221,9 @@ print('imported water')
 mountaintypes = ['high','highscattered']
 mountains = {}
 for mountain in mountaintypes:
-    with open(
-        '{}io/geo/mountains/usgsgmek3_{}_-170,-30lon_5,70lat.polygon.p'.format(
-            projpath, mountain),'rb') as p:
+    with open(os.path.join(
+            '{}','io','geo','mountains','usgsgmek3_{}_-170,-30lon_5,70lat.polygon.p'
+            ).format(projpath, mountain),'rb') as p:
         poly = pickle.load(p)
         
         ### Merge with bounding box
@@ -256,6 +256,6 @@ print('buffered 0.: {:.3f}'.format(polyavailable_region.area))
 
 ###### Save it
 os.makedirs(outpath, exist_ok=True)
-with open(outpath+savename, 'wb') as p:
+with open(os.path.join(outpath,savename), 'wb') as p:
     pickle.dump(polyavailable_region, p)
 

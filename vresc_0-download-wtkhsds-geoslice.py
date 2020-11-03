@@ -43,7 +43,7 @@ datum = 'windspeed_100m'
 skip = 2
 start = 0
 
-outpath = regeodatapath+'in/WTK-HSDS/every{}-offset{}/{}/'.format(
+outpath = os.path.join(regeodatapath,'in','WTK-HSDS','every{}-offset{}','{}').format(
     skip, start, datum)
 
 numattempts = 200
@@ -70,7 +70,7 @@ dset = hsds[datum]
 for i in tqdm(dt.index, desc=datum):
     ### Save it as the timestamp
     savename = dt.loc[i].strftime('%Y%m%dT%H%M')
-    filename = outpath+savename+'.npy.gz'
+    filename = os.path.join(outpath,savename+'.npy.gz')
 
     if not os.path.exists(filename):
         ### Retry if server errors

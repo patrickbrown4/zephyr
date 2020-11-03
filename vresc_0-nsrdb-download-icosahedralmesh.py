@@ -24,7 +24,8 @@ years = [2018]
 psmversion = 3
 chunksize = 1000
 chunklistin = None
-pointsfile = 'io/usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv.csv'
+pointsfile = os.path.join(
+    'io','usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv.csv')
 
 #############
 ### FUNCTIONS

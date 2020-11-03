@@ -149,7 +149,7 @@ except ValueError:
 ### INPUTS ###
 
 ### Generator cost (annualized capex + FOM)
-infile = sdcpath+'io/capacityexpansion-linear/generator_fuel_assumptions-11.xlsx'
+infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
 defaults = zephyr.cpm.Defaults(infile)
 pvcost = 'PV_track_2030_mid'
 windcost = 'Wind_2030_mid'
@@ -166,23 +166,24 @@ loss_distance = 0.01/1.60934/100
 
 ### Set output file location and savenames
 inpath = regeopath
-distancepath = inpath+'io/cf-2007_2013/v08_states-LCOE-transloss-urban{}/{}x/{}/'.format(
-        urban,transcostmultiplier,'state')
-outpath = (
-    regeopath
-    +'io/cf-2007_2013/v08_states-LCOE-transloss-urban{}/{}x/{}/{}/'
+distancepath = os.path.join(
+    inpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}',''
+).format(urban,transcostmultiplier,'state')
+outpath = os.path.join(
+    regeopath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}','{}',''
 ).format(urban,transcostmultiplier,level,resource)
 if resource == 'wind':
-    outpath += '{}/'.format(model.replace(':','|').replace('/','_'))
+    outpath = os.path.join(outpath, model.replace(':','|').replace('/','_'))
 elif resource == 'pv':
-    outpath += '{}-{}t-{:.0f}az/'.format(systemtype,axis_tilt,axis_azimuth)
+    outpath = os.path.join(outpath, '{}-{}t-{:.0f}az').format(systemtype, axis_tilt, axis_azimuth)
 
 ### Set output resolution (bits) at which to save all-site CFs
 resolution = 16
 
 ### Get region file
 dfregion = pd.read_csv(
-    regeopath+'io/regions_20191211.csv', index_col=0, header=[0,1])['area']
+    os.path.join(regeopath,'io','regions_20191211.csv'), 
+    index_col=0, header=[0,1])['area']
 
 ### Get states to loop over
 states = dfregion.loc[dfregion[level]==zone].index.values
@@ -193,15 +194,15 @@ if resource == 'pv':
     dcac = 1.3
 
     index_coords = 'psm3id'
-    resourcedatapath = extdatapath+'in/NSRDB/ico9/'
+    resourcedatapath = os.path.join(extdatapath,'in','NSRDB','ico9')
 
     # weightsfile = (
     #     inpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
     #     'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
     # ).format(level, level, zone)
     weightsfile = {
-        state: (
-            inpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
+        state: os.path.join(
+            inpath,'io','geo','developable-area','{}','nsrdb-icomesh9',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format('state', 'state', state)
         for state in states
@@ -211,11 +212,10 @@ if resource == 'pv':
     #     + 'nsrdb,icomesh9-urbanU-trans230-{}_{}.csv'
     # ).format(urban, level, zone)
     distancefile = {
-        state: (
-            distancepath+'pv/distance-station_urban{}-mincost/'
+        state: os.path.join(
+            distancepath,'pv','distance-station_urban{}-mincost',
             + 'nsrdb,icomesh9-urbanU-trans230-{}_{}.csv'
-        ).format(
-            urban, 'state', state)
+        ).format(urban, 'state', state)
         for state in states
     }
 
@@ -235,26 +235,26 @@ elif resource == 'wind':
     pc_vmax = 60
 
     index_coords = 'rowf_colf'
-    resourcedatapath = (
-        extdatapath+'in/WTK-HSDS/every2-offset0/timeseries/usa-halfdegbuff/')
+    resourcedatapath = os.path.join(
+        extdatapath,'in','WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
 
     weightsfile = {
-        state: (
-            inpath+'io/geo/developable-area/{}/wtk-hsds-every2/'
+        state: os.path.join(
+            inpath,'io','geo','developable-area','{}','wtk-hsds-every2',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format('state', 'state', state)
         for state in states
     }
     distancefile = {
-        state: (
-            distancepath+'wind/distance-station_urban{}-mincost/'
-            + 'wtkhsds,every2,offset0,onshore-urbanU-trans230-{}_{}.csv'
-        ).format(
-            urban, 'state', state)
+        state: os.path.join(
+            distancepath,'wind','distance-station_urban{}-mincost',
+            'wtkhsds,every2,offset0,onshore-urbanU-trans230-{}_{}.csv'
+        ).format(urban, 'state', state)
         for state in states
     }
 
-    savename_cfmean = outpath+(
+    savename_cfmean = os.path.join(
+        outpath,
         'mean-wtkhsds,every2,offset0,onshore-{}-{}m-{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}.csv'
     ).format(model.replace(':','|').replace('/','_'), 
              height, loss_system_wind*100, gencostannual, level, zone)
@@ -285,16 +285,16 @@ elif resolution == 64:
     fileresolution = np.float64
 
 ### Set up output folders and filenames
-os.makedirs(outpath+'binned/', exist_ok=True)
+os.makedirs(os.path.join(outpath,'binned'), exist_ok=True)
 
 savename_cfhourly = (
     savename_cfmean.replace('mean-','full-')
     .replace('.csv','.df{}.p.gz'.format(resolution)))
 savename_bins_lcoe = (
-    savename_cfmean.replace('mean-','binned/cf-')
+    savename_cfmean.replace('mean-',os.path.join('binned','cf-'))
     .replace('.csv','-NUMBREAKSlcoebins.csv'))
 savename_bins_area = (
-    savename_cfmean.replace('mean-','binned/area-')
+    savename_cfmean.replace('mean-',os.path.join('binned','area-'))
     .replace('.csv','-NUMBREAKSlcoebins.csv'))
 print('\n'+savename_cfmean)
 sys.stdout.flush()
@@ -325,7 +325,7 @@ dfdistance = pd.concat(
 if resource == 'pv':
     ###### Load points to model
     dfcoords = pd.read_csv(
-        regeopath+'io/icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv')
+        os.path.join(regeopath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
     ### Merge sites with calculated land area
     dfsites = dfcoords.merge(polyweights, on=index_coords, how='inner')
     ### Create the PV system
@@ -339,7 +339,7 @@ if resource == 'pv':
         nsrdbid = dfsites.loc[index,'psm3id']
         dictpv = []
         for year in years:
-            nsrdbfile = '{}{}/v3/{}_{}_{}_{}.csv'.format(
+            nsrdbfile = os.path.join('{}{}','v3','{}_{}_{}_{}.csv').format(
                 resourcedatapath, year, nsrdbid,
                 dfsites.loc[index,'Latitude'],
                 dfsites.loc[index,'Longitude'],

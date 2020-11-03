@@ -22,7 +22,6 @@ extdatapath = zephyr.settings.extdatapath
 ### INPUTS ###
 
 resources = ['pv','wind']
-resources = ['wind']
 overwrite = False
 
 ###### >>> Modify this section based on input shapefiles
@@ -103,12 +102,12 @@ def cost_trans_annual(row):
 
 ### Filepaths
 outpath = {
-    'pv': (
-        projpath+'io/cf-2007_2013/v08_states-LCOE-transloss-urbanedge/{}x/{}/'
-        'pv/distance-station_urbanedge-mincost/'.format(transcostmultiplier, level)),
-    'wind': (
-        projpath+'io/cf-2007_2013/v08_states-LCOE-transloss-urbanedge/{}x/{}/'
-        'wind/distance-station_urbanedge-mincost/'.format(transcostmultiplier, level)),
+    'pv': os.path.join(
+        projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urbanedge','{}x','{}',
+        'pv','distance-station_urbanedge-mincost').format(transcostmultiplier, level),
+    'wind': os.path.join(
+        projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urbanedge','{}x','{}',
+        'wind','distance-station_urbanedge-mincost').format(transcostmultiplier, level),
 }
 
 #####################################################
@@ -248,12 +247,12 @@ for zone in zones:
 
     index_coords = {'pv':'psm3id', 'wind':'rowf_colf'}
     weightsfile = {
-        'pv': (
-            projpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
+        'pv': os.path.join(
+            projpath,'io','geo','developable-area','{}','nsrdb-icomesh9',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format(level, level, zone),
-        'wind': (
-            projpath+'io/geo/developable-area/{}/wtk-hsds-every2/'
+        'wind': os.path.join(
+            projpath,'io','geo','developable-area','{}','wtk-hsds-every2',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format(level, level, zone)
     }
@@ -266,18 +265,18 @@ for zone in zones:
         os.makedirs(outpath[resource], exist_ok=True)
 
         ### Skip if it's done
-        if os.path.exists(outpath[resource]+outfile[resource]) and (overwrite == False):
+        if os.path.exists(os.path.join(outpath[resource],outfile[resource])) and (overwrite == False):
             continue
 
         ###### Load site dataframes
         if resource == 'pv':
-            dfcoords = pd.read_csv(
-                projpath+'io/icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv')
+            dfcoords = pd.read_csv(os.path.join(
+                projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
 
         elif resource == 'wind':
             ### Load HSDS points
             dfcoords = pd.read_csv(
-                projpath+'io/wind/hsdscoords.gz'
+                os.path.join(projpath,'io','wind','hsdscoords.gz')
             ).rename(columns={'row':'row_full','col':'col_full'})
             ### Make the lookup index
             dfcoords['rowf_colf'] = (
@@ -392,4 +391,4 @@ for zone in zones:
         ### Save it
         dfout = pd.concat(dictout).reset_index(level=1,drop=True)
         dfsites = dfsites.merge(dfout, left_index=True, right_index=True, how='left')
-        dfsites.to_csv(outpath[resource]+outfile[resource], index=False)
+        dfsites.to_csv(os.path.join(outpath[resource],outfile[resource]), index=False)

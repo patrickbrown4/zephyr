@@ -60,8 +60,8 @@ else:
 ##############
 ### INPUTS ###
 
-inpath = projpath+'io/geo/developable-area/{}/'.format(zonesource)
-outpath = inpath+'{}/'.format(resource)
+inpath = os.path.join(projpath,'io','geo','developable-area','{}').format(zonesource)
+outpath = os.path.join(inpath,resource)
 polyfile = prefix+'{}.poly.p'.format(zone)
 
 savepoly = polyfile.replace('polyavailable','sitepoly').replace('.poly.p','.gdf.p')
@@ -71,9 +71,9 @@ savearea = polyfile.replace('polyavailable','sitearea').replace('.poly.p','.csv'
 ### PROCEDURE ###
 
 if returnarea:
-    print(outpath+savearea)
+    print(os.path.join(outpath,savearea))
 if returnfull:
-    print(outpath+savepoly)
+    print(os.path.join(outpath,savepoly))
 if not any([returnarea, returnfull]):
     print('need to specify -f and/or -c')
     quit()
@@ -89,7 +89,7 @@ if resource == 'wtk-hsds-every2':
     ### Get WTK coordinates
     ### Load all HSDS points
     dfcoords = pd.read_csv(
-        projpath+'io/wind/hsdscoords.gz'
+        os.path.join(projpath,'io','wind','hsdscoords.gz')
     ).rename(columns={'row':'row_full','col':'col_full'})
     ### Index by original row,column
     dfcoords[index_coords] = dfcoords.row_full.astype(str)+'_'+dfcoords.col_full.astype(str)
@@ -103,7 +103,9 @@ elif resource == 'nsrdb-icomesh9':
     index_coords = 'psm3id'
     ### Have to use extra points beyond edge of US, same as for wind
     dfcoords = pd.read_csv(
-        projpath+'io/world-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv-psm3id.csv',
+        os.path.join(
+            projpath,'io',
+            'world-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv-psm3id.csv'),
         dtype={'psm3id':'category'}
     )
     dfcoords = dfcoords.loc[dfcoords.psm3id.notnull()].copy()
@@ -114,9 +116,10 @@ elif resource == 'merra2':
     model = 'Gamesa:G126/2500_low'
     modelsave = model.replace(':','|').replace('/','_')
     height = 100
-    loss_system_wind = 0.15
-    infile = datapath+(
-        'NASA/MERRA2/M2T1NXSLV-usa1degbuff-{}m/CF-0loss-{}.df.p.gz'.format(height, modelsave))
+    loss_system_wind = 0.19
+    infile = os.path.join(
+        datapath,'NASA','MERRA2','M2T1NXSLV-usa1degbuff-{}m',
+        'CF-0loss-{}.df.p.gz').format(height, modelsave)
     with gzip.open(infile, 'rb') as p:
         dfin = pickle.load(p) * (1 - loss_system_wind)
     ### Pull the coordinates
@@ -135,8 +138,8 @@ polyweights = zephyr.toolbox.voronoi_polygon_overlap(
 
 ###### Save it
 if returnfull:
-    with open(outpath+savepoly, 'wb') as p:
+    with open(os.path.join(outpath,savepoly), 'wb') as p:
         pickle.dump(polyweights.dropna(subset=[index_coords]), p)
 if returnarea:
     polyweights.dropna(subset=[index_coords]).drop(['geometry'],axis=1).to_csv(
-        outpath+savearea, index=False)
+        os.path.join(outpath,savearea), index=False)
