@@ -5,8 +5,6 @@ from glob import glob
 from tqdm import tqdm, trange
 from warnings import warn
 
-import xarray as xr
-
 ###########################
 ### IMPORT PROJECT PATH ###
 import zephyr.settings
@@ -293,6 +291,8 @@ def getWINDnode_fromkey(isonode, key, year,
     Returns
     -------
     """
+    ### Imports
+    import xarray as xr
     ### Check inputs
     if type(key) != pd.core.frame.DataFrame:
         raise Exception("type(key) must be pd.DataFrame.")
