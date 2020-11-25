@@ -18,9 +18,14 @@
 ## Usage notes
 ### Capacity-planning model
 * `zephyr-run-base.py`
-    * After setting up the environment, the core model can be run for an example full-US scenario using the command: `python zephyr-run-base.py 23 -o test -s clp`. Arguments: `23` indicates the case to use from `cases-test.xlsx` (i.e. the full US at PA resolution over 2007–2013 with new transmission allowed); `-o test` indicates the folder in which to store the outputs; `-s clp` indicates theat the COIN-LP solver should be used.
+    * After setting up the environment, the core model can be run for an example full-US scenario using the command: `python zephyr-run-base.py 23 -o test -s clp`.
+        * `23` indicates the case to use from the cases file (in this case, running for the full US at PA resolution over 2007–2013 with new transmission allowed).
+        * `-o test` indicates both the folder in which to store the outputs (`out/test`) and the cases file from which to read the input settings (`cases-test.xlsx`).
+        * `-s clp` indicates that the COIN-LP solver should be used. `-s gurobi` also works if you have gurobi installed with a working license.
 ### Renewable-energy supply curves
-* VRE supply curve functionality has not yet been fully tested in this environment.
+* **VRE supply curve functionality has not yet been fully tested in this environment.**
+* `vresc_-1-icomesh.py`
+    * Generates the icosahedral mesh used to define NSRDB (solar) points.
 * `vresc_0-nsrdb-download-icosahedralmesh.py`
     * Submits download requests for NSRDB (solar) data. Before use, update `nsrdbparams` in `settings.py` with your email address and other info. Once the downloads are prepared you will receive emails at the address you provided with links to download the data. By default, requests are submitted in 1000-site chunks for 41990 sites over the continental US in 1-year batches from 20007–2013.
 * `vresc_0-download-wtkhsds-geoslice.py`
