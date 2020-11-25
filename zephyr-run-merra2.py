@@ -1,5 +1,5 @@
 ###############
-#%% IMPORTS ###
+### IMPORTS ###
 
 import pandas as pd
 import numpy as np
@@ -10,16 +10,16 @@ from tqdm import tqdm, trange
 import zephyr
 
 ### Common paths
-projpath = zephyr.settings.projpath
+projpath = os.path.expanduser('~/Dropbox/MITEI/Projects/REGeo/package/REVIEW_Joule/')
 
 #######################
-#%% ARGUMENT INPUTS ###
+### ARGUMENT INPUTS ###
 
 import argparse
-parser = argparse.ArgumentParser(description='run zephyr for series of cases')
+parser = argparse.ArgumentParser(description='run capaxl for series of cases')
 
 parser.add_argument(
-    'case', type=str, default='0',
+    'case', type=str,
     help='integer name of case; can be single integer or comma-delimited',)
 parser.add_argument(
     '-r', '--region', default='all', help='region or "all"')
@@ -27,19 +27,13 @@ parser.add_argument(
     '-o', '--batchname', default='test', 
     help='case file name: "cases-{batchname}.xlsx"')
 parser.add_argument(
+    '-v', '--verbose', action='count', default=0)
+parser.add_argument(
+    '-z', '--overwrite', action='store_true')
+parser.add_argument(
     '-m', '--method', type=int, default=-1, 
     help=('gurobi method: -1 default, 0 primal simplex, 1 dual simplex, 2 barrier, '
-          '3 concurrent, 4 deterministic concurrent, 5 deterministic concurrent simplex',))
-parser.add_argument(
-    '-t', '--truncmid', type=float, default=0.0005, help='midpoint for vre truncation')
-parser.add_argument(
-    '-y', '--savemod', type=str, default='', help='append to end of savename')
-parser.add_argument(
-    '-s', '--solver', type=str, default='gurobi', choices=['gurobi','clp','cbc','gurobipy'])
-parser.add_argument('-v', '--verbose', action='count', default=0)
-parser.add_argument('-z', '--overwrite', action='store_true')
-parser.add_argument('-a', '--includedual', action='store_true')
-parser.add_argument('-b', '--includereserves', action='store_true')
+          '3 concurrent, 4 deterministic concurrent, 5 deterministic concurrenr simplex',))
 
 ### Parse it
 args = parser.parse_args()
@@ -50,41 +44,19 @@ runregions = args.region.split(',')
 verbose = args.verbose
 overwrite = args.overwrite
 method = args.method
-truncmid = args.truncmid
-savemod = args.savemod
-if len(savemod) > 0:
-    savemod = '-{}'.format(savemod)
-solver = args.solver
-includedual = args.includedual
-includereserves = args.includereserves
-
-####################
-#%% DEBUG INPUTS ###
-
-# case = 0
-# runcases = [0]
-# region = 'all'
-# runregions = ['all']
-# outpath = os.path.join(projpath,'out','test')+os.sep
-# method = -1
-# truncmid = 0
-# savemod = ''
-# solver = 'gurobi'
-# verbose = True
-# overwrite = False
-# includedual = False
-# includereserves = False
+# if runregions in ['all','USA','usa',None]:
 
 ##############
-#%% INPUTS ###
+### INPUTS ###
 
-truncmax = 2 * truncmid
+solver = 'gurobi'
+truncmid = 0.0005
+truncmax = 0.001
 
 ### Cases to run
-os.makedirs(os.path.join(outpath), exist_ok=True)
-batchfile = 'cases-{}.xlsx'.format(batchname)
+os.makedirs(outpath+'results/', exist_ok=True)
 cases = pd.read_excel(
-    batchfile, index_col='case', sheet_name='runs',
+    outpath+'cases.xlsx', index_col='case', sheet_name='runs',
     dtype={'include_hydro_res':bool, 'include_hydro_ror':bool,
            'include_gas':bool, 'gasprice':str,
            'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
@@ -93,11 +65,12 @@ cases = pd.read_excel(
            'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,}
 )
 dfstate = pd.read_excel(
-    batchfile, sheet_name='state', index_col=0, header=[0,1],
+    outpath+'cases.xlsx', sheet_name='state',
+    index_col=0, header=[0,1],
 )
 
 ### Economic and simulation assumptions
-infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
+infile = sdcpath+'io/capacityexpansion-linear/generator_fuel_assumptions-11.xlsx'
 defaults = zephyr.cpm.Defaults(infile)
 
 ### Distance parameters
@@ -134,11 +107,17 @@ timezones = {
 tzs = {region:zephyr.toolbox.timezone_to_tz(timezones[region]) for region in timezones}
 
 #################
-#%% PROCEDURE ###
+### PROCEDURE ###
 print(outpath)
-print(','.join([str(i) for i in runcases]))
+print(args.case)
 print(','.join(runregions))
 sys.stdout.flush()
+
+### Get EFS load
+dictefs = zephyr.io.getload_efs(returnfull=True)
+
+for key in dictefs.keys():
+    dictefs[key]['Load'] = (dictefs[key].StaticLoadMW + dictefs[key].FlexLoadMW) / 1000
 
 ### Select case
 for case in runcases:
@@ -176,24 +155,19 @@ for case in runcases:
     life_gen = cases.loc[case,'life_gen']
     if np.isnan(life_gen):
         life_gen = None
-    life_stor = cases.loc[case,'life_stor']
-    if np.isnan(life_stor):
-        life_stor = None
     interconnection_scaler = cases.loc[case,'interconnection_scaler']
     region_scaler_file = cases.loc[case,'region_scaler']
-    load_scaler = 1
 
     ###### Distance parameters
-    distancepath = os.path.join(
-        projpath,'io','cf-2007_2013','{}x','').format(interconnection_scaler)
+    distancepath = regeopath+'io/cf-1998_2018/'
 
     ### PV assumptions
-    pvpath = os.path.join(
-        projpath,'io','cf-2007_2013','{}x','{}','pv','{}-{}t-{:.0f}az','binned',''
-    ).format(interconnection_scaler, unitlevel, systemtype, axis_tilt, axis_azimuth)
+    pvpath = regeopath+(
+        'io/cf-1998_2018/{}/pv/{}-{}t-{:.0f}az/binned/'
+    ).format(unitlevel, systemtype, axis_tilt, axis_azimuth)
     def pvfile(zone,bins): 
-        return '-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}-{}lcoebins.csv'.format(
-            systemtype, axis_tilt, axis_azimuth, dcac, pvcost_bins, unitlevel, zone, bins)
+        return '-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-track_2030_mid-{}_{}-{}lcoebins.csv'.format(
+            systemtype, axis_tilt, axis_azimuth, dcac, unitlevel, zone, bins)
     scaler_pv = cases.loc[case,'scaler_pv'] ### GW per km^2
 
     ### Wind assumptions
@@ -202,15 +176,14 @@ for case in runcases:
     loss_system_wind = cases.loc[case,'wind_loss']
     height = cases.loc[case,'wind_height']
     def windfile(zone,bins): 
-        return ('-wtkhsds,every2,offset0,onshore-{}-{}m-'
-                '{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}-{}lcoebins.csv').format(
-            modelsave, height, loss_system_wind*100, windcost_bins, unitlevel, zone, bins)
-    windpath = os.path.join(
-        projpath,'io','cf-2007_2013','{}x','{}','wind','{}','binned',''
-    ).format(interconnection_scaler, unitlevel, modelsave)
+        return ('-merra2-{}-{}m-'
+                '{:.0f}pctloss-2030_mid-{}_{}-{}lcoebins.csv').format(
+            modelsave, height, loss_system_wind*100, unitlevel, zone, bins)
+    windpath = regeopath+(
+        'io/cf-1998_2018/{}/merra2/{}/binned/'
+    ).format(unitlevel, modelsave)
     scaler_wind = cases.loc[case,'scaler_wind'] ### GW per km^2
     vom_wind = cases.loc[case,'vom_wind']
-    
     ### Storage assumptions
     vom_stor = cases.loc[case,'vom_stor']
 
@@ -229,7 +202,7 @@ for case in runcases:
     except ValueError:
         build_ac_voltage = int(cases.loc[case,'build_ac_voltage'].split('*')[0])
         cost_scaler_ac = float(cases.loc[case,'build_ac_voltage'].split('*')[1])
-    
+
     build_dc = cases.loc[case,'build_dc']
     try:
         build_dc = bool(int(build_dc))
@@ -237,10 +210,10 @@ for case in runcases:
     except ValueError:
         build_dc = bool(int(build_dc.split('*')[0]))
         cost_scaler_dc = float(cases.loc[case,'build_dc'].split('*')[1])
-    
+
     try:
         transcost_adder = pd.read_csv(
-            os.path.join(projpath,'io','transmission','transmission-adder-{}.csv').format(
+            regeopath+'io/transmission/transmission-adder-{}.csv'.format(
                 cases.loc[case,'intralevel_transcost']),
             index_col=0)['transcost_adder_MUSD_per_GW_yr'].to_dict()
     except FileNotFoundError:
@@ -251,7 +224,7 @@ for case in runcases:
 
     try:
         region_scaler = pd.read_csv(
-            os.path.join(projpath,'io','cost','{}.csv'.format(region_scaler_file)),
+            regeopath+'io/cost/{}.csv'.format(region_scaler_file),
             index_col=0)
     except FileNotFoundError:
         print('No regional cost scaler: {}'.format(region_scaler_file))
@@ -277,18 +250,16 @@ for case in runcases:
     ###### Inputs for inter-zone transmission
     ### Connectivity matrix
     dftransin = pd.read_csv(
-        os.path.join(
-            projpath,'io','transmission','reeds-transmission-GW-{}.csv').format(unitlevel),
+        regeopath+'io/transmission/reeds-transmission-GW-{}.csv'.format(unitlevel),
         index_col=[0,1])
     ### Distance matrix
     dfdistance = pd.read_csv(
-        os.path.join(
-            projpath,'io','transmission','{}-distance-urbancentroid-km.csv').format(unitlevel),
+        regeopath+'io/transmission/{}-distance-urbancentroid-km.csv'.format(unitlevel),
         index_col=0)
 
     ### Get level/unitlevel dataframe
     dfregion = pd.read_excel(
-        batchfile, sheet_name=unitlevel,
+        outpath+'cases.xlsx', sheet_name=unitlevel,
         index_col=0, header=[0,1], 
         dtype={
             ('numbins_pv',unitlevel): int, ('numbins_wind',unitlevel): int,
@@ -311,7 +282,7 @@ for case in runcases:
     else:
         region_generator = regions
     for region in region_generator:
-        savename = outpath+'{}-{}{}.p.gz'.format(case, region, savemod)
+        savename = outpath+'results/{}-{}.p.gz'.format(case, region)
         if verbose >= 1:
             print(savename)
             sys.stdout.flush()
@@ -389,22 +360,19 @@ for case in runcases:
         ### Site CF info
         pv_sites = {
             node: pd.read_csv(
-                os.path.join(
-                    distancepath,'{}','pv','{}-{}t-{:.0f}az',
-                    'mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
+                (distancepath+'{}/pv/{}-{}t-{:.0f}az/mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-'
+                 +'{:.2f}dcac-track_2030_mid-{}_{}.csv'
                 ).format(unitlevel, systemtype, axis_tilt, axis_azimuth, 
                          systemtype, axis_tilt, axis_azimuth, dcac, 
-                         pvcost_bins, unitlevel, node))
+                         unitlevel, node))
             for node in nodes
         }
         wind_sites = {
             node: pd.read_csv(
-                os.path.join(
-                    distancepath,'{}','wind','{}',
-                    ('mean-wtkhsds,every2,offset0,onshore'
-                     + '-{}-{}m-{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}.csv')
+                (distancepath+'{}/merra2/{}/mean-merra2-'
+                 +'{}-{}m-{:.0f}pctloss-2030_mid-{}_{}.csv'
                 ).format(unitlevel, modelsave, modelsave, height, 
-                         loss_system_wind*100, windcost_bins, unitlevel, node))
+                         loss_system_wind*100, unitlevel, node))
             for node in nodes
         }
 
@@ -425,17 +393,60 @@ for case in runcases:
                 wind_trans_cost[(node,jbin)] = (df.km2 * df.cost_trans_annual).sum() / df.km2.sum()
 
         ####### Load
-        ### Get aggregated state loads
-        dfnode = pd.read_csv(
-            os.path.join(projpath,'io','load','EFS','central-2007_2013-{}-{}-{}.csv.gz').format(
-                scenario,loadtype,loadyear),
-            index_col=0, parse_dates=True)
+        ###### Loop over the state loads and shift into central time
+        allstates = [s for s in zephyr.toolbox.timezone_state if s not in ['AK','HI','DC']]
+        shiftyear = 2001
+        dfload_states = {}
+        for state in allstates:
+            ### Shift to 2001 since it isn't a leap year
+            tz_state = zephyr.toolbox.tz_state[state]
+            df = zephyr.io.getload_efs(
+                    state, loadyear, scenario, dictefs=dictefs
+                )[loadtype].interpolate('time')
+            df.index = pd.date_range('2001-01-01','2002-01-01',freq='H',closed='left',tz=tz_state)
+            df = df.tz_convert(tz)
+            
+            ### tz_state == tz
+            if tz_state == tz:
+                dflooped = df.loc[str(shiftyear)].copy()
+
+            ### tz_state west of tz
+            elif int(tz_state.split('+')[1]) > int(tz.split('+')[1]):
+                dfnextyear = df.loc[str(shiftyear+1)].copy()
+                dfnextyear.index = dfnextyear.index.shift(-365,'D')
+                dfthisyear = df.loc[str(shiftyear)].copy()
+                dflooped = pd.concat([dfnextyear,dfthisyear],axis=0)
+
+            ### tz_state east of tz
+            elif int(tz_state.split('+')[1]) < int(tz.split('+')[1]):
+                dfprevyear = df.loc[str(shiftyear-1)].copy()
+                dfprevyear.index = dfprevyear.index.shift(365,'D') ### could have just used t.replace(year=shiftyear)
+                dfthisyear = df.loc[str(shiftyear)].copy()
+                dflooped = pd.concat([dfthisyear,dfprevyear],axis=0)
+            
+            dfload_states[state] = dflooped
+            
+        dfload_states = pd.concat(dfload_states, axis=1)
+
+        ### Shift to simulation year
+        newindex = pd.date_range(
+            '{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1), 
+            closed='left', freq='H', tz=tz)
+        newindex = pd.Series(index=newindex)
+        if (len(vreyears) == 1):
+            if zephyr.toolbox.yearhours(vreyears[0]) == 8784:
+                newindex = newindex.loc[~((newindex.index.month==2)&(newindex.index.day==29))].index
+        else:
+            dfload_states = pd.concat([dfload_states]*len(vreyears), axis=0)
+            newindex = newindex.loc[~((newindex.index.month==2)&(newindex.index.day==29))].index
+        dfload_states.index = newindex
+
 
         ### Sum the loads for unitlevels
         dfload = {}
         for node in nodes:
             states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
-            dfload[node] = pd.concat({state: dfnode[state] for state in states}, axis=1).sum(axis=1)
+            dfload[node] = pd.concat({state: dfload_states[state] for state in states}, axis=1).sum(axis=1)
         dfload = pd.concat(dfload, axis=1).tz_convert(tz)
         # ### Correct leap day transfer; shouldn't do anything for USA timezone (-6)
         if tz == 'Etc/GMT+6':
@@ -449,204 +460,164 @@ for case in runcases:
         else:
             dfload.index = dfload.index.map(
                 lambda t: t.replace(day=28) if ((t.month==2) and (t.day==29)) else t)
-        #######################
-        ### Add load scaler (20200305)
-        dfload = dfload * load_scaler
 
         ###### VRE series
         ### Wind
-        dictwindall = {
-            node: pd.read_csv(
-                windpath+'cf'+windfile(node,numbins_wind[node]), 
-                index_col=0, parse_dates=True)
-            .tz_convert(tz)
-            ### * (1 - loss_system_wind) 
-            ### For this version, wind losses are already factored
-            ### into the CF file (since we need the real CF to calculate the LCOE).
-            ### Can't just go back and change the CF, because it would alter the 
-            ### balance between generator and transmission costs and change the relative
-            ### contribution of generator CF vs distance to transmission assets.
-            ### So to change the losses, would need to redo the CF bins for wind.
-            for node in nodes
-        }
-
-        ### Drop leap days
+        dictwindall = {}
         for node in nodes:
-            dictwindall[node] = (
-                dictwindall[node].drop(dictwindall[node].loc['2008-02-29'].index)
-                .drop(dictwindall[node].loc['2012-02-29'].index))
-            dictwindall[node] = dictwindall[node].tz_convert(tz)
-            ### NEW 20200308: truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
-            if verbose >= 3:
-                print(node)
-                print(dictwindall[node].describe())
-            for col in dictwindall[node].columns:
-                dictwindall[node].loc[dictwindall[node][col] < truncmid, col] = 0
-                dictwindall[node].loc[
-                ((dictwindall[node][col] >= truncmid)
-                 & (dictwindall[node][col] < truncmax)), col] = truncmax
-            if verbose >= 3:
-                print(dictwindall[node].describe())
-                sys.stdout.flush()
-            ### continue
-
+            df = pd.read_csv(
+                windpath+'cf'+windfile(node,numbins_wind[node]), 
+                index_col=0, parse_dates=True).tz_convert(tz)
+            ### MERRA2 timestamps are shifted by 30 min; shift them back
+            df.index = df.index.shift(-30,freq='min')
+            ### Drop leap days
+            df = df.loc[~((df.index.month==2)&(df.index.day==29))]
+            ### Truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
+            for col in df.columns:
+                df.loc[df[col] < truncmid, col] = 0
+                df.loc[((df[col] >= truncmid) & (df[col] < truncmax)), col] = truncmax
+            ### Store it
+            dictwindall[node] = df
         dfwindall = pd.concat(dictwindall, axis=1)
 
         ### PV
-        dictpvall = {
-            node: pd.read_csv(
-                pvpath+'cf'+pvfile(node,numbins_pv[node]),
-                index_col=0, parse_dates=True,
-            ).tz_convert(tz)
-            for node in nodes
-        }
-
-        ### Drop leap days
+        dictpvall = {}
         for node in nodes:
-            dictpvall[node] = (
-                dictpvall[node].drop(dictpvall[node].loc['2008-02-29'].index)
-                .drop(dictpvall[node].loc['2012-02-29'].index))
-            dictpvall[node] = dictpvall[node].tz_convert(tz)
-            ### NEW 20200308: truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
-            if verbose >= 3:
-                print(node)
-                print(dictpvall[node].describe())
-            for col in dictpvall[node].columns:
-                dictpvall[node].loc[dictpvall[node][col] < truncmid, col] = 0
-                dictpvall[node].loc[
-                ((dictpvall[node][col] >= truncmid)
-                 & (dictpvall[node][col] < truncmax)), col] = truncmax
-            if verbose >= 3:
-                print(dictpvall[node].describe())
-                sys.stdout.flush()
-            ### continue
-
+            df = pd.read_csv(
+                pvpath+'cf'+pvfile(node,numbins_pv[node]), 
+                index_col=0, parse_dates=True).tz_convert(tz)
+            ### Drop leap days
+            df = df.loc[~((df.index.month==2)&(df.index.day==29))]
+            ### Truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
+            for col in df.columns:
+                df.loc[df[col] < truncmid, col] = 0
+                df.loc[((df[col] >= truncmid) & (df[col] < truncmax)), col] = truncmax
+            ### Store it
+            dictpvall[node] = df
         dfpvall = pd.concat(dictpvall, axis=1)
 
-        ###### Hydro (reservoir)
-        ### Get existing power capacity 
-        hydrorescap = pd.read_csv(
-            os.path.join(projpath,'io','hydro','hydro-CHcap-ORNL-GW-nonRORonly.csv'), 
-            index_col=0, squeeze=True,
-        ).to_dict()
-        dfhydroresin = pd.read_csv(
-            os.path.join(
-                projpath,'io','hydro','hydro-MonthlyGenEIA923-2006_2017-GWh-nonRORonly.csv'), 
-            parse_dates=True, index_col=0)
-        # print('dfhydroresin\n', dfhydroresin.head()) ### DEBUG
 
-        dicthydrores = {}
-        hasreses = {}
-        rescap = {}
-        for node in nodes:
-            states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
-            # print('states', states) ### DEBUG
-            dicthydroresnode = {}
-            hasresesnode = {}
-            for state in states:
-                ### Get monthly generation, select state, filter to vreyears
-                dfhydroresnode = dfhydroresin.copy()
-                ### Check if state has hydro Res
-                if state in dfhydroresnode.columns:
-                    hasres = True
-                    # print('state in dfhydroresnode.columns') ### DEBUG
-                    dfhydroresnode = dfhydroresnode[state].loc[
-                        slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
-                    ].copy()
+        # ###### Hydro (reservoir)
+        # ### Get existing power capacity 
+        # hydrorescap = pd.read_csv(
+        #     regeopath+'io/hydro/hydro-CHcap-ORNL-GW-nonRORonly.csv', index_col=0, squeeze=True,
+        # ).to_dict()
+        # dfhydroresin = pd.read_csv(
+        #     regeopath+'io/hydro/hydro-MonthlyGenEIA923-2006_2017-GWh-nonRORonly.csv', 
+        #     parse_dates=True, index_col=0)
+        # # print('dfhydroresin\n', dfhydroresin.head()) ### DEBUG
 
-                    ### Convert to average daily generation in GWh
-                    dfhydroresnode = dfhydroresnode / dfhydroresnode.index.map(
-                        lambda x: zephyr.toolbox.monthhours(x.year,x.month)/24)
-                    ### Upsample to daily timeseries
-                    dfhydroresnode = dfhydroresnode.resample('1D').ffill().loc[
-                        slice(str(vreyears[0]), str(vreyears[-1]))].copy()
-                    ### Name it
-                    dfhydroresnode = dfhydroresnode.rename('res')
+        # dicthydrores = {}
+        # hasreses = {}
+        # rescap = {}
+        # for node in nodes:
+        #     states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
+        #     # print('states', states) ### DEBUG
+        #     dicthydroresnode = {}
+        #     hasresesnode = {}
+        #     for state in states:
+        #         ### Get monthly generation, select state, filter to vreyears
+        #         dfhydroresnode = dfhydroresin.copy()
+        #         ### Check if state has hydro Res
+        #         if state in dfhydroresnode.columns:
+        #             hasres = True
+        #             # print('state in dfhydroresnode.columns') ### DEBUG
+        #             dfhydroresnode = dfhydroresnode[state].loc[
+        #                 slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
+        #             ].copy()
 
-                    ###### IMPORTANT: Clip hydro timeseries to <= power capacity
-                    dfhydroresnode = dfhydroresnode.clip(upper=(hydrorescap[state]*24))
+        #             ### Convert to average daily generation in GWh
+        #             dfhydroresnode = dfhydroresnode / dfhydroresnode.index.map(
+        #                 lambda x: zephyr.toolbox.monthhours(x.year,x.month)/24)
+        #             ### Upsample to daily timeseries
+        #             dfhydroresnode = dfhydroresnode.resample('1D').ffill().loc[
+        #                 slice(str(vreyears[0]), str(vreyears[-1]))].copy()
+        #             ### Name it
+        #             dfhydroresnode = dfhydroresnode.rename('res')
 
-                    ### Store it
-                    dicthydroresnode[state] = dfhydroresnode
-                else:
-                    hasres = False
-                ### Store it
-                hasresesnode[state] = hasres
+        #             ###### IMPORTANT: Clip hydro timeseries to <= power capacity
+        #             dfhydroresnode = dfhydroresnode.clip(upper=(hydrorescap[state]*24))
 
-            ### Aggregate the state hydros
-            hasres = any([hasresesnode[state] for state in states])
-            if hasres:
-                dfhydroresnode = pd.concat(dicthydroresnode,axis=1).sum(axis=1)
-                rescap[node] = 0
-                for state in states:
-                    if hasresesnode[state]:
-                        rescap[node] += hydrorescap[state]
-                ### Store it if it has hydrores
-                dicthydrores[node] = dfhydroresnode
-            ### Record whether it has hydrores
-            hasreses[node] = hasres
-        ### Record if there's any res in the node
-        hasres = any([hasreses[node] for node in nodes])
-        if hasres:
-            dfhydrores = pd.concat(dicthydrores, axis=1)
-        else:
-            dfhydrores = None
+        #             ### Store it
+        #             dicthydroresnode[state] = dfhydroresnode
+        #         else:
+        #             hasres = False
+        #         ### Store it
+        #         hasresesnode[state] = hasres
 
-        ###### Hydro (ROR)
-        ### Get existing power capacity
-        dfhydrororin = pd.read_csv(
-            os.path.join(
-                projpath,'io','hydro','hydro-MonthlyGenEIA923-2006_2017-GWh-RORonly.csv'), 
-            parse_dates=True, index_col=0)
-        dicthydroror = {}
-        dictrormax = {}
-        hasrors = {}
-        for node in nodes:
-            states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
-            dicthydrorornode = {}
-            dictrormaxnode = {}
-            hasrorsnode = {}
-            for state in states:
-                df = dfhydrororin.copy()
-                ### Check if state has hydro ROR
-                if state in df.columns:
-                    hasror = True
-                    df = df[state].copy()
-                    ### Convert to average hourly generation in GW
-                    df = df / df.index.map(
-                        lambda x: zephyr.toolbox.monthhours(x.year,x.month))
-                    ### Get max gen
-                    rormax = float(df.max())
-                    ### Subset to simulation year(s)
-                    df = df.loc[
-                        slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
-                    ].rename('ror')
-                    ### Upsample to hourly timeseries
-                    df = df.tz_localize(tz).resample('1H').ffill().loc[
-                        slice(str(vreyears[0]), str(vreyears[-1]))].copy()
+        #     ### Aggregate the state hydros
+        #     hasres = any([hasresesnode[state] for state in states])
+        #     if hasres:
+        #         dfhydroresnode = pd.concat(dicthydroresnode,axis=1).sum(axis=1)
+        #         rescap[node] = 0
+        #         for state in states:
+        #             if hasresesnode[state]:
+        #                 rescap[node] += hydrorescap[state]
+        #         ### Store it if it has hydrores
+        #         dicthydrores[node] = dfhydroresnode
+        #     ### Record whether it has hydrores
+        #     hasreses[node] = hasres
+        # ### Record if there's any res in the node
+        # hasres = any([hasreses[node] for node in nodes])
+        # if hasres:
+        #     dfhydrores = pd.concat(dicthydrores, axis=1)
+        # else:
+        #     dfhydrores = None
 
-                    ### Store it
-                    dicthydrorornode[state] = df
-                    dictrormaxnode[state] = rormax
-                else:
-                    hasror = False
-                ### Store it
-                hasrorsnode[state] = hasror
+        # ###### Hydro (ROR)
+        # ### Get existing power capacity
+        # dfhydrororin = pd.read_csv(
+        #     regeopath+'io/hydro/hydro-MonthlyGenEIA923-2006_2017-GWh-RORonly.csv', 
+        #     parse_dates=True, index_col=0)
+        # dicthydroror = {}
+        # dictrormax = {}
+        # hasrors = {}
+        # for node in nodes:
+        #     states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
+        #     dicthydrorornode = {}
+        #     dictrormaxnode = {}
+        #     hasrorsnode = {}
+        #     for state in states:
+        #         df = dfhydrororin.copy()
+        #         ### Check if state has hydro ROR
+        #         if state in df.columns:
+        #             hasror = True
+        #             df = df[state].copy()
+        #             ### Convert to average hourly generation in GW
+        #             df = df / df.index.map(
+        #                 lambda x: zephyr.toolbox.monthhours(x.year,x.month))
+        #             ### Get max gen
+        #             rormax = float(df.max())
+        #             ### Subset to simulation year(s)
+        #             df = df.loc[
+        #                 slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
+        #             ].rename('ror')
+        #             ### Upsample to hourly timeseries
+        #             df = df.tz_localize(tz).resample('1H').ffill().loc[
+        #                 slice(str(vreyears[0]), str(vreyears[-1]))].copy()
 
-            ### Aggregate the state RORs
-            dictrormax[node] = sum(dictrormaxnode.values())
-            hasrors[node] = any(hasrorsnode.values())
-            if hasrors[node]:
-                dicthydroror[node] = pd.concat(dicthydrorornode,axis=1).sum(axis=1)
+        #             ### Store it
+        #             dicthydrorornode[state] = df
+        #             dictrormaxnode[state] = rormax
+        #         else:
+        #             hasror = False
+        #         ### Store it
+        #         hasrorsnode[state] = hasror
 
-        hasror = any(hasrors.values())
-        if hasror:
-            dfhydroror = pd.concat(dicthydroror, axis=1)
-            ### Convert to CF
-            for col in dfhydroror.columns:
-                dfhydroror[col] = dfhydroror[col] / dictrormax[col]
-        else:
-            dfhydroror = None
+        #     ### Aggregate the state RORs
+        #     dictrormax[node] = sum(dictrormaxnode.values())
+        #     hasrors[node] = any(hasrorsnode.values())
+        #     if hasrors[node]:
+        #         dicthydroror[node] = pd.concat(dicthydrorornode,axis=1).sum(axis=1)
+
+        # hasror = any(hasrors.values())
+        # if hasror:
+        #     dfhydroror = pd.concat(dicthydroror, axis=1)
+        #     ### Convert to CF
+        #     for col in dfhydroror.columns:
+        #         dfhydroror[col] = dfhydroror[col] / dictrormax[col]
+        # else:
+        #     dfhydroror = None
 
 
         ###### Merge it all
@@ -654,20 +625,14 @@ for case in runcases:
             {**{'load': pd.concat({'load':dfload},axis=1), 
                 'pv': dfpvall, 
                 'wind': dfwindall},
-             **({'reshydro': pd.concat({'res':dfhydrores},axis=1).tz_localize(tz)} 
-                if hasres else {}),
-             **({'rorhydro': pd.concat({'ror':dfhydroror},axis=1).fillna(0.)} 
-                if hasror else {}),
+             # **({'reshydro': pd.concat({'res':dfhydrores},axis=1).tz_localize(tz)} 
+             #    if hasres else {}),
+             # **({'rorhydro': pd.concat({'ror':dfhydroror},axis=1).fillna(0.)} 
+             #    if hasror else {}),
             },
             axis=1
         ).tz_convert(tz).loc[slice(str(vreyears[0]),str(vreyears[-1]))]#.fillna(0.)
         dfrun['pv'] = dfrun['pv'].fillna(0.)
-
-        ### SPECIAL CASE for WTK: Drop the last day if 2013 is included
-        if 2013 in vreyears:
-            dfrun.drop(dfrun.loc['2013-12-31'].index, inplace=True)
-        ### NEW: Drop the null values (important for EFS since it doesn't include leap days)
-        dfrun = dfrun.loc[dfrun['wind'].iloc[:,0].notnull()].copy()
 
         ### Make sure the timeseries covers an integer number of days
         if len(dfrun) % 24 != 0:
@@ -689,7 +654,7 @@ for case in runcases:
         ###### PHS
         if include_phs:
             phscap_state = pd.read_csv(
-                os.path.join(projpath,'io','hydro','PHS-GW-EIA860_2018.csv'), 
+                regeopath+'io/hydro/PHS-GW-EIA860_2018.csv', 
                 index_col=0, squeeze=True,
             ).to_dict()
             ### Aggregate by node
@@ -701,7 +666,7 @@ for case in runcases:
         ###### Nuclear
         if include_nuclear:
             nuclearcap_state = pd.read_csv(
-                os.path.join(projpath,'io','nuclear','nuclear-GW-EIA860_2018-post{}.csv').format(
+                regeopath+'io/nuclear/nuclear-GW-EIA860_2018-post{}.csv'.format(
                     include_nuclear), 
                 index_col=0, squeeze=True,
             ).to_dict()
@@ -805,7 +770,7 @@ for case in runcases:
                     system.add_generator(
                         '{}_{}'.format(gen,node), 
                         zephyr.cpm.Gen(
-                            gen, defaults=defaults, fuel=gasprice, wacc=wacc_gen, 
+                            gen, defaults=defaults, fuel=gasprice, wacc=wacc_gen,
                             lifetime=life_gen,
                         ).localize(node)
                     )
@@ -821,11 +786,9 @@ for case in runcases:
 
         ### Add storage
         annualcost_E = zephyr.cpm.Storage(
-            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_E
+            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,).cost_annual_E
         annualcost_P = zephyr.cpm.Storage(
-            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_P
+            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,).cost_annual_P
         for node in nodes:
             ### Apply regional cost scaler, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -853,7 +816,7 @@ for case in runcases:
                             'PHS', defaults=defaults, cost_capex_E=0, cost_capex_P=0,)
                          .add_duration_min(include_phs).add_duration_max(include_phs)
                          .add_power_bound_hi(phscap[node])
-                         # .add_power_bound_lo(phscap[node]) ### 20200429 removed
+                         .add_power_bound_lo(phscap[node])
                          .localize(node))
                     )
 
@@ -975,50 +938,53 @@ for case in runcases:
         if (reserve_margin not in [None,np.nan]):
             system.set_reserves(reserve_margin)
 
-        ###### Make the Reservoir hydro and add its availability
-        if include_hydro_res == True: 
-            for node in nodes:
-                if hasreses[node]:
-                    hydrores = (
-                        zephyr.cpm.HydroRes(
-                            'Hydro_Res', defaults=defaults,
-                            newbuild=False, balancelength='day',
-                            cost_vom=vom_res,
-                        )
-                        .add_capacity_bound_hi(rescap[node])
-                        .add_availability(dfrun.reshydro.res[node].iloc[::24], period=0)
-                        .localize(node)
-                    )
-                    system.add_reshydro('Hydro_Res_{}'.format(node), hydrores)
+        # ###### Make the Reservoir hydro and add its availability
+        # if include_hydro_res == True: 
+        #     for node in nodes:
+        #         if hasreses[node]:
+        #             hydrores = (
+        #                 zephyr.cpm.HydroRes(
+        #                     'Hydro_Res', defaults=defaults,
+        #                     newbuild=False, balancelength='day',
+        #                     cost_vom=vom_res,
+        #                 )
+        #                 .add_capacity_bound_hi(rescap[node])
+        #                 .add_availability(dfrun.reshydro.res[node].iloc[::24], period=0)
+        #                 .localize(node)
+        #             )
+        #             system.add_reshydro('Hydro_Res_{}'.format(node), hydrores)
 
-        ###### Make the ROR hydro and add its availability
-        if include_hydro_ror == True:
-            for node in nodes:
-                if hasrors[node]:
-                    hydroror = (
-                        zephyr.cpm.Gen(
-                            'Hydro_ROR', defaults=defaults, cost_capex=0,)
-                        ### TODO: Should we include lower bound or let it be retired?
-                        .add_capacity_bound_lo(dictrormax[node]) 
-                        .add_capacity_bound_hi(dictrormax[node])
-                        .add_availability(dfrun.rorhydro.ror[node], period=0)
-                        .localize(node)
-                    )
-                    system.add_generator('Hydro_ROR_{}'.format(node), hydroror)
+        # ###### Make the ROR hydro and add its availability
+        # if include_hydro_ror == True:
+        #     for node in nodes:
+        #         if hasrors[node]:
+        #             hydroror = (
+        #                 zephyr.cpm.Gen(
+        #                     'Hydro_ROR', defaults=defaults, cost_capex=0,)
+        #                 ### TODO: Should we include lower bound or let it be retired?
+        #                 .add_capacity_bound_lo(dictrormax[node]) 
+        #                 .add_capacity_bound_hi(dictrormax[node])
+        #                 .add_availability(dfrun.rorhydro.ror[node], period=0)
+        #                 .localize(node)
+        #             )
+        #             system.add_generator('Hydro_ROR_{}'.format(node), hydroror)
 
         ### Solve it
         _ = zephyr.cpm.model(
             system, solver=solver, verbose=verbose, 
-            includereserves=includereserves, includedual=includedual,
+            includereserves=False, includemodel=False,
             savename=savename,
             Method=method,
         )
         if verbose:
-            try:
-                # (output_capacity, output_operation, output_values, system) = _
-                print('{:.2f} $/MWh'.format(_[2]['lcoe']))
-                sys.stdout.flush()
-            except TypeError as err:
-                print(err)
-                sys.stdout.flush()
-                continue
+            (output_capacity, output_operation, output_values, system) = _
+            ### SCOE
+            print('{:.2f} $/MWh'.format(output_values['lcoe']))
+            ### Total storage duration
+            df = pd.Series(output_capacity)
+            print('{:.2f} TWh storage'.format(
+                df[
+                    [c for c in df.index if c.startswith('Stor') and c.endswith('_E')]
+                ].sum() / 1000
+            ))
+            sys.stdout.flush()

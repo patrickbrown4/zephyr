@@ -18,11 +18,25 @@ projpath = zephyr.settings.projpath
 datapath = zephyr.settings.datapath
 extdatapath = zephyr.settings.extdatapath
 
+#######################
+### ARGUMENT INPUTS ###
+
+import argparse
+parser = argparse.ArgumentParser(description='transmission-site distance')
+
+parser.add_argument(
+    '-r', '--resource', help="'wind' or 'pv'", type=str, choices=['wind','pv'])
+parser.add_argument(
+    '-z', '--overwrite', help='indicate whether to overwrite existing outputs',
+    action='store_true')
+
+### Parse argument inputs
+args = parser.parse_args()
+resource = args.resource
+overwrite = args.overwrite
+
 ##############
 ### INPUTS ###
-
-resources = ['pv','wind']
-overwrite = False
 
 ###### >>> Modify this section based on input shapefiles
 zonesource = 'state'
@@ -257,138 +271,137 @@ for zone in zones:
         ).format(level, level, zone)
     }
 
-    ########################################################################
-    ### Loop over resources, calculate interconnection distances + costs ###
+    ###################################################
+    ### Calculate interconnection distances + costs ###
 
-    for resource in resources:
-        ### Make output folder
-        os.makedirs(outpath[resource], exist_ok=True)
+    ### Make output folder
+    os.makedirs(outpath[resource], exist_ok=True)
 
-        ### Skip if it's done
-        if os.path.exists(os.path.join(outpath[resource],outfile[resource])) and (overwrite == False):
-            continue
+    ### Skip if it's done
+    if os.path.exists(os.path.join(outpath[resource],outfile[resource])) and (overwrite == False):
+        continue
 
-        ###### Load site dataframes
-        if resource == 'pv':
-            dfcoords = pd.read_csv(os.path.join(
-                projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+    ###### Load site dataframes
+    if resource == 'pv':
+        dfcoords = pd.read_csv(os.path.join(
+            projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
 
-        elif resource == 'wind':
-            ### Load HSDS points
-            dfcoords = pd.read_csv(
-                os.path.join(projpath,'io','wind','hsdscoords.gz')
-            ).rename(columns={'row':'row_full','col':'col_full'})
-            ### Make the lookup index
-            dfcoords['rowf_colf'] = (
-                dfcoords.row_full.astype(str)+'_'+dfcoords.col_full.astype(str))
-        
-        ### Load site weights for the modeled zone, merging multiply-listed sites
-        polyweights = pd.read_csv(
-            weightsfile[resource]
-        ).groupby(index_coords[resource]).sum().reset_index()
+    elif resource == 'wind':
+        ### Load HSDS points
+        dfcoords = pd.read_csv(
+            os.path.join(projpath,'io','wind','hsdscoords.gz')
+        ).rename(columns={'row':'row_full','col':'col_full'})
+        ### Make the lookup index
+        dfcoords['rowf_colf'] = (
+            dfcoords.row_full.astype(str)+'_'+dfcoords.col_full.astype(str))
+    
+    ### Load site weights for the modeled zone, merging multiply-listed sites
+    polyweights = pd.read_csv(
+        weightsfile[resource]
+    ).groupby(index_coords[resource]).sum().reset_index()
 
-        ### Merge sites with calculated land area
-        dfsites = dfcoords.merge(polyweights, on=index_coords[resource], how='inner')
-        
-        ###### Transmission
-        ### Get the zone site polygons
-        polyzone = dfzones.loc[zone,'geometry']
+    ### Merge sites with calculated land area
+    dfsites = dfcoords.merge(polyweights, on=index_coords[resource], how='inner')
+    
+    ###### Transmission
+    ### Get the zone site polygons
+    polyzone = dfzones.loc[zone,'geometry']
 
-        ### Get the line endpoints within the modeled zone
-        dfendszone = dfends.loc[dfends.within(polyzone)].copy()
+    ### Get the line endpoints within the modeled zone
+    dfendszone = dfends.loc[dfends.within(polyzone)].copy()
 
-        ###### Urban areas
-        ### Get bounding box for region, add 0.5° buffer
-        regionbounds = {
-            'longitude':[polyzone.bounds[0]-0.5, polyzone.bounds[2]+0.5],
-            'latitude':[polyzone.bounds[1]-0.5, polyzone.bounds[3]+0.5],
-        }
+    ###### Urban areas
+    ### Get bounding box for region, add 0.5° buffer
+    regionbounds = {
+        'longitude':[polyzone.bounds[0]-0.5, polyzone.bounds[2]+0.5],
+        'latitude':[polyzone.bounds[1]-0.5, polyzone.bounds[3]+0.5],
+    }
 
-        ### Get region bounding box
-        regionbox = shapely.geometry.Polygon([
-            (regionbounds['longitude'][0], regionbounds['latitude'][0]),
-            (regionbounds['longitude'][1], regionbounds['latitude'][0]),
-            (regionbounds['longitude'][1], regionbounds['latitude'][1]),
-            (regionbounds['longitude'][0], regionbounds['latitude'][1]),
-        ])
+    ### Get region bounding box
+    regionbox = shapely.geometry.Polygon([
+        (regionbounds['longitude'][0], regionbounds['latitude'][0]),
+        (regionbounds['longitude'][1], regionbounds['latitude'][0]),
+        (regionbounds['longitude'][1], regionbounds['latitude'][1]),
+        (regionbounds['longitude'][0], regionbounds['latitude'][1]),
+    ])
 
-        dfurban_states = dfurban_all.loc[
-            dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in neighborstates[zone])
-        ].copy()
+    dfurban_states = dfurban_all.loc[
+        dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in neighborstates[zone])
+    ].copy()
 
-        ### Merge all the urban areas, since we don't need to know which is which
-        ### Filter to urban areas included in urbanclasses
-        ### 'U' is urban area of >50k people; 'C' is urban cluster of ≥2.5k and <50k
-        ### https://www2.census.gov/geo/pdfs/reference/ua/2010ua_faqs.pdf
-        dfurban = dfurban_states.loc[dfurban_states.UATYP10.isin(urbanclasses)]
-        dfurban = dfurban.dissolve('FUNCSTAT10')
+    ### Merge all the urban areas, since we don't need to know which is which
+    ### Filter to urban areas included in urbanclasses
+    ### 'U' is urban area of >50k people; 'C' is urban cluster of ≥2.5k and <50k
+    ### https://www2.census.gov/geo/pdfs/reference/ua/2010ua_faqs.pdf
+    dfurban = dfurban_states.loc[dfurban_states.UATYP10.isin(urbanclasses)]
+    dfurban = dfurban.dissolve('FUNCSTAT10')
 
-        ### Pull out the urban polygon
-        polyurban = dfurban.loc['S','geometry'].buffer(0.)
-        polyurban = polyurban.intersection(regionbox).buffer(0.)
+    ### Pull out the urban polygon
+    polyurban = dfurban.loc['S','geometry'].buffer(0.)
+    polyurban = polyurban.intersection(regionbox).buffer(0.)
 
-        ### Filter to urban areas within the state
-        dfurbanzone = dfurban.copy()
-        dfurbanzone['geometry'] = dfurbanzone.intersection(polyzone)
-        polyurbanzone = polyurban.intersection(polyzone).buffer(0.)
+    ### Filter to urban areas within the state
+    dfurbanzone = dfurban.copy()
+    dfurbanzone['geometry'] = dfurbanzone.intersection(polyzone)
+    polyurbanzone = polyurban.intersection(polyzone).buffer(0.)
 
-        ### Put it in a geodataframe
-        multipolyurbanzone = []
-        for x in dfurbanzone.iloc[0]['geometry']:
-            if type(x) not in [shapely.geometry.linestring.LineString]:
-                multipolyurbanzone.append(shapely.geometry.Polygon(x))
-        dfurbanzone = gpd.GeoSeries(shapely.geometry.MultiPolygon(multipolyurbanzone))
+    ### Put it in a geodataframe
+    multipolyurbanzone = []
+    for x in dfurbanzone.iloc[0]['geometry']:
+        if type(x) not in [shapely.geometry.linestring.LineString]:
+            multipolyurbanzone.append(shapely.geometry.Polygon(x))
+    dfurbanzone = gpd.GeoSeries(shapely.geometry.MultiPolygon(multipolyurbanzone))
 
-        ### Get urban centroid
-        urban_centroid_lon, urban_centroid_lat = list(dfurbanzone.iloc[0].centroid.coords)[0]
+    ### Get urban centroid
+    urban_centroid_lon, urban_centroid_lat = list(dfurbanzone.iloc[0].centroid.coords)[0]
 
-        ######### Calculate substation distances and costs
-        ###### Substation-urban edge distances and costs
-        ### Loop over substations
-        distances_trunk = []
-        lat_urban_fromstation = []
-        lon_urban_fromstation = []
+    ######### Calculate substation distances and costs
+    ###### Substation-urban edge distances and costs
+    ### Loop over substations
+    distances_trunk = []
+    lat_urban_fromstation = []
+    lon_urban_fromstation = []
 
-        for i in dfendszone.index:
-            ### Get the site-urban distance in km
-            stationpoint = shapely.geometry.Point(dfendszone.loc[i,'lon'], dfendszone.loc[i,'lat'])
-            polypoint = shapely.ops.nearest_points(stationpoint, polyurbanzone)[1]
-            km = geopy.distance.distance((stationpoint.y, stationpoint.x), (polypoint.y,polypoint.x)).km
-            distances_trunk.append(km)
-            lat_urban_fromstation.append(polypoint.y)
-            lon_urban_fromstation.append(polypoint.x)
+    for i in dfendszone.index:
+        ### Get the site-urban distance in km
+        stationpoint = shapely.geometry.Point(dfendszone.loc[i,'lon'], dfendszone.loc[i,'lat'])
+        polypoint = shapely.ops.nearest_points(stationpoint, polyurbanzone)[1]
+        km = geopy.distance.distance((stationpoint.y, stationpoint.x), (polypoint.y,polypoint.x)).km
+        distances_trunk.append(km)
+        lat_urban_fromstation.append(polypoint.y)
+        lon_urban_fromstation.append(polypoint.x)
 
-        ### Store the trunk distance data
-        dfendszone['km_urban_fromstation'] = distances_trunk
-        dfendszone['lat_urban_fromstation'] = lat_urban_fromstation
-        dfendszone['lon_urban_fromstation'] = lon_urban_fromstation
-        ### Calculate trunk costs
-        dfendszone['cost_trunk_upfront'] = (
-            dfendszone['voltage'].map(cost) * dfendszone['km_urban_fromstation'])
+    ### Store the trunk distance data
+    dfendszone['km_urban_fromstation'] = distances_trunk
+    dfendszone['lat_urban_fromstation'] = lat_urban_fromstation
+    dfendszone['lon_urban_fromstation'] = lon_urban_fromstation
+    ### Calculate trunk costs
+    dfendszone['cost_trunk_upfront'] = (
+        dfendszone['voltage'].map(cost) * dfendszone['km_urban_fromstation'])
 
-        ###### Site-substation costs
-        ### Loop over sites
-        dictout = {}
-        for i in tqdm(dfsites.index, desc='{},{}'.format(level,zone)):
-            sitepoint = shapely.geometry.Point(
-                dfsites.loc[i,lon[resource]], dfsites.loc[i,lat[resource]])
-            ### Get all distances
-            dfendszone['km_site_spur'] = dfendszone.apply(
-                lambda row: geopy.distance.distance((sitepoint.y, sitepoint.x),(row['lat'],row['lon'])).km,
-                axis=1,
-            )
-            dfendszone['cost_spur_upfront'] = dfendszone['km_site_spur'] * cost[230]
-            dfendszone['cost_trans_upfront'] = (
-                dfendszone['cost_trunk_upfront'] + dfendszone['cost_spur_upfront'])
-            ### Calculate annualized cost
-            dfendszone['cost_trans_annual'] = dfendszone.apply(cost_trans_annual, axis=1)
+    ###### Site-substation costs
+    ### Loop over sites
+    dictout = {}
+    for i in tqdm(dfsites.index, desc='{},{}'.format(level,zone)):
+        sitepoint = shapely.geometry.Point(
+            dfsites.loc[i,lon[resource]], dfsites.loc[i,lat[resource]])
+        ### Get all distances
+        dfendszone['km_site_spur'] = dfendszone.apply(
+            lambda row: geopy.distance.distance((sitepoint.y, sitepoint.x),(row['lat'],row['lon'])).km,
+            axis=1,
+        )
+        dfendszone['cost_spur_upfront'] = dfendszone['km_site_spur'] * cost[230]
+        dfendszone['cost_trans_upfront'] = (
+            dfendszone['cost_trunk_upfront'] + dfendszone['cost_spur_upfront'])
+        ### Calculate annualized cost
+        dfendszone['cost_trans_annual'] = dfendszone.apply(cost_trans_annual, axis=1)
 
-            ### Store all the output information
-            dictout[i] = (dfendszone.nsmallest(1,'cost_trans_annual')
-             .drop(['geometry'],axis=1)
-             .rename(columns={'lon':'lon_station','lat':'lat_station'}))
+        ### Store all the output information
+        dictout[i] = (dfendszone.nsmallest(1,'cost_trans_annual')
+            .drop(['geometry'],axis=1)
+            .rename(columns={'lon':'lon_station','lat':'lat_station'}))
 
-        ### Save it
-        dfout = pd.concat(dictout).reset_index(level=1,drop=True)
-        dfsites = dfsites.merge(dfout, left_index=True, right_index=True, how='left')
-        dfsites.to_csv(os.path.join(outpath[resource],outfile[resource]), index=False)
+    ### Save it
+    dfout = pd.concat(dictout).reset_index(level=1,drop=True)
+    dfsites = dfsites.merge(dfout, left_index=True, right_index=True, how='left')
+    dfsites.to_csv(os.path.join(outpath[resource],outfile[resource]), index=False)

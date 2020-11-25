@@ -2728,7 +2728,7 @@ def postNSRDBsize(
 
 def postNSRDBfiles(
     years, lonlats, psmversion=3,
-    api_key=apikeys['nsrdb'],
+    api_key=apikeys['nrel'],
     attributes='ghi,dni,dhi,solar_zenith_angle,air_temperature,wind_speed',
     leap_day='true', interval='30', utc='false'):
     """
@@ -2843,7 +2843,7 @@ def downloadNSRDBfile(
         
     url = (
         urlbase + querify(
-            api_key=apikeys['nsrdb'], full_name=nsrdbparams['full_name'], 
+            api_key=apikeys['nrel'], full_name=nsrdbparams['full_name'], 
             email=nsrdbparams['email'], affiliation=nsrdbparams['affiliation'], 
             reason=nsrdbparams['reason'], mailing_list=nsrdbparams['mailing_list'],
             wkt=lonlat2wkt(lon, lat), names=year, attributes=attributes,

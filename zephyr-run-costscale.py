@@ -19,7 +19,7 @@ import argparse
 parser = argparse.ArgumentParser(description='run zephyr for series of cases')
 
 parser.add_argument(
-    'case', type=str, default='0',
+    'case', type=str,
     help='integer name of case; can be single integer or comma-delimited',)
 parser.add_argument(
     '-r', '--region', default='all', help='region or "all"')
@@ -76,28 +76,31 @@ includereserves = args.includereserves
 # includereserves = False
 
 ##############
-#%% INPUTS ###
+### INPUTS ###
 
 truncmax = 2 * truncmid
 
 ### Cases to run
-os.makedirs(os.path.join(outpath), exist_ok=True)
-batchfile = 'cases-{}.xlsx'.format(batchname)
+os.makedirs(outpath+'results/', exist_ok=True)
 cases = pd.read_excel(
-    batchfile, index_col='case', sheet_name='runs',
-    dtype={'include_hydro_res':bool, 'include_hydro_ror':bool,
-           'include_gas':bool, 'gasprice':str,
-           'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
-           'include_phs':int, 'build_phs':str, 
-           'include_nuclear':int, 'build_nuclear':str,
-           'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,}
+    outpath+'cases.xlsx', index_col='case', sheet_name='runs',
+    dtype={
+        #'include_hydro_res':bool, 'include_hydro_ror':bool,
+        'include_gas':bool, 'gasprice':str,
+        'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
+        'include_phs':int, #'build_phs':str, 
+        'include_nuclear':int, 'build_nuclear':str,
+        'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,
+        'pvscale':float,'windscale':float,'storscale':float,'transscale':float,
+   }
 )
 dfstate = pd.read_excel(
-    batchfile, sheet_name='state', index_col=0, header=[0,1],
+    outpath+'cases.xlsx', sheet_name='state',
+    index_col=0, header=[0,1],
 )
 
 ### Economic and simulation assumptions
-infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
+infile = sdcpath+'io/capacityexpansion-linear/generator_fuel_assumptions-11.xlsx'
 defaults = zephyr.cpm.Defaults(infile)
 
 ### Distance parameters
@@ -134,9 +137,9 @@ timezones = {
 tzs = {region:zephyr.toolbox.timezone_to_tz(timezones[region]) for region in timezones}
 
 #################
-#%% PROCEDURE ###
+### PROCEDURE ###
 print(outpath)
-print(','.join([str(i) for i in runcases]))
+print(args.case)
 print(','.join(runregions))
 sys.stdout.flush()
 
@@ -176,9 +179,6 @@ for case in runcases:
     life_gen = cases.loc[case,'life_gen']
     if np.isnan(life_gen):
         life_gen = None
-    life_stor = cases.loc[case,'life_stor']
-    if np.isnan(life_stor):
-        life_stor = None
     interconnection_scaler = cases.loc[case,'interconnection_scaler']
     region_scaler_file = cases.loc[case,'region_scaler']
     load_scaler = 1
@@ -195,6 +195,8 @@ for case in runcases:
         return '-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}-{}lcoebins.csv'.format(
             systemtype, axis_tilt, axis_azimuth, dcac, pvcost_bins, unitlevel, zone, bins)
     scaler_pv = cases.loc[case,'scaler_pv'] ### GW per km^2
+    ### Scale the PV cost by pvscale
+    pvscale = cases.loc[case,'pvscale']
 
     ### Wind assumptions
     model = cases.loc[case,'wind_model']
@@ -210,37 +212,32 @@ for case in runcases:
     ).format(interconnection_scaler, unitlevel, modelsave)
     scaler_wind = cases.loc[case,'scaler_wind'] ### GW per km^2
     vom_wind = cases.loc[case,'vom_wind']
-    
+    ### Scale the wind cost by windscale
+    windscale = cases.loc[case,'windscale']
+
     ### Storage assumptions
     vom_stor = cases.loc[case,'vom_stor']
+    ### Scale the storage cost by storscale
+    storscale = cases.loc[case,'storscale']
 
     ### Hydro assumptions
-    include_hydro_res = cases.loc[case,'include_hydro_res']
-    include_hydro_ror = cases.loc[case,'include_hydro_ror']
+    include_hydro_res = True #cases.loc[case,'include_hydro_res']
+    include_hydro_ror = True #cases.loc[case,'include_hydro_ror']
     include_gas = cases.loc[case,'include_gas']
     vom_res = cases.loc[case,'vom_res']
 
     ### Transmission assumptions
     existing_trans = cases.loc[case,'existing_trans']
     build_ac = cases.loc[case,'build_ac']
-    try:
-        build_ac_voltage = int(cases.loc[case,'build_ac_voltage'])
-        cost_scaler_ac = 1
-    except ValueError:
-        build_ac_voltage = int(cases.loc[case,'build_ac_voltage'].split('*')[0])
-        cost_scaler_ac = float(cases.loc[case,'build_ac_voltage'].split('*')[1])
-    
+    build_ac_voltage = int(cases.loc[case,'build_ac_voltage'])
     build_dc = cases.loc[case,'build_dc']
-    try:
-        build_dc = bool(int(build_dc))
-        cost_scaler_dc = 1
-    except ValueError:
-        build_dc = bool(int(build_dc.split('*')[0]))
-        cost_scaler_dc = float(cases.loc[case,'build_dc'].split('*')[1])
+    build_dc = bool(int(build_dc))
+    ### Scale the transmission cost by transscale
+    transscale = cases.loc[case,'transscale']
     
     try:
         transcost_adder = pd.read_csv(
-            os.path.join(projpath,'io','transmission','transmission-adder-{}.csv').format(
+            regeopath+'io/transmission/transmission-adder-{}.csv'.format(
                 cases.loc[case,'intralevel_transcost']),
             index_col=0)['transcost_adder_MUSD_per_GW_yr'].to_dict()
     except FileNotFoundError:
@@ -251,7 +248,7 @@ for case in runcases:
 
     try:
         region_scaler = pd.read_csv(
-            os.path.join(projpath,'io','cost','{}.csv'.format(region_scaler_file)),
+            regeopath+'io/cost/{}.csv'.format(region_scaler_file),
             index_col=0)
     except FileNotFoundError:
         print('No regional cost scaler: {}'.format(region_scaler_file))
@@ -260,7 +257,7 @@ for case in runcases:
 
     ### Existing infrastructure assumptions
     include_phs = cases.loc[case,'include_phs']
-    build_phs = cases.loc[case,'build_phs']
+    build_phs = False #cases.loc[case,'build_phs']
 
     ### Fossil / nuclear assumptions
     gasprice = 'naturalgas_'+cases.loc[case,'gasprice']
@@ -277,18 +274,16 @@ for case in runcases:
     ###### Inputs for inter-zone transmission
     ### Connectivity matrix
     dftransin = pd.read_csv(
-        os.path.join(
-            projpath,'io','transmission','reeds-transmission-GW-{}.csv').format(unitlevel),
+        regeopath+'io/transmission/reeds-transmission-GW-{}.csv'.format(unitlevel),
         index_col=[0,1])
     ### Distance matrix
     dfdistance = pd.read_csv(
-        os.path.join(
-            projpath,'io','transmission','{}-distance-urbancentroid-km.csv').format(unitlevel),
+        regeopath+'io/transmission/{}-distance-urbancentroid-km.csv'.format(unitlevel),
         index_col=0)
 
     ### Get level/unitlevel dataframe
     dfregion = pd.read_excel(
-        batchfile, sheet_name=unitlevel,
+        outpath+'cases.xlsx', sheet_name=unitlevel,
         index_col=0, header=[0,1], 
         dtype={
             ('numbins_pv',unitlevel): int, ('numbins_wind',unitlevel): int,
@@ -311,7 +306,7 @@ for case in runcases:
     else:
         region_generator = regions
     for region in region_generator:
-        savename = outpath+'{}-{}{}.p.gz'.format(case, region, savemod)
+        savename = outpath+'results/{}-{}{}.p.gz'.format(case, region, savemod)
         if verbose >= 1:
             print(savename)
             sys.stdout.flush()
@@ -330,9 +325,8 @@ for case in runcases:
             nodes = dfstate.loc[dfstate['area'][level] == region].index.values
 
         ### Bins override - number of bins
-        numbins_pv, numbins_wind = {}, {}
-        for node in nodes:
-            numbins_pv[node] = cases.loc[case,'numbins_pv']
+    
+        numbins_pv[node] = cases.loc[case,'numbins_pv']
             if pd.isnull(numbins_pv[node]):
                 numbins_pv[node] = dfregion.loc[node,('numbins_pv',level)]
             else:
@@ -389,9 +383,8 @@ for case in runcases:
         ### Site CF info
         pv_sites = {
             node: pd.read_csv(
-                os.path.join(
-                    distancepath,'{}','pv','{}-{}t-{:.0f}az',
-                    'mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
+                (distancepath+'{}/pv/{}-{}t-{:.0f}az/mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-'
+                 +'{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
                 ).format(unitlevel, systemtype, axis_tilt, axis_azimuth, 
                          systemtype, axis_tilt, axis_azimuth, dcac, 
                          pvcost_bins, unitlevel, node))
@@ -399,10 +392,8 @@ for case in runcases:
         }
         wind_sites = {
             node: pd.read_csv(
-                os.path.join(
-                    distancepath,'{}','wind','{}',
-                    ('mean-wtkhsds,every2,offset0,onshore'
-                     + '-{}-{}m-{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}.csv')
+                (distancepath+'{}/wind/{}/mean-wtkhsds,every2,offset0,onshore-'
+                 +'{}-{}m-{:.0f}pctloss-{:.0f}USDperkWacyr-{}_{}.csv'
                 ).format(unitlevel, modelsave, modelsave, height, 
                          loss_system_wind*100, windcost_bins, unitlevel, node))
             for node in nodes
@@ -427,7 +418,7 @@ for case in runcases:
         ####### Load
         ### Get aggregated state loads
         dfnode = pd.read_csv(
-            os.path.join(projpath,'io','load','EFS','central-2007_2013-{}-{}-{}.csv.gz').format(
+            regeopath+'io/load/EFS/central-2007_2013-{}-{}-{}.csv.gz'.format(
                 scenario,loadtype,loadyear),
             index_col=0, parse_dates=True)
 
@@ -689,7 +680,7 @@ for case in runcases:
         ###### PHS
         if include_phs:
             phscap_state = pd.read_csv(
-                os.path.join(projpath,'io','hydro','PHS-GW-EIA860_2018.csv'), 
+                regeopath+'io/hydro/PHS-GW-EIA860_2018.csv', 
                 index_col=0, squeeze=True,
             ).to_dict()
             ### Aggregate by node
@@ -701,7 +692,7 @@ for case in runcases:
         ###### Nuclear
         if include_nuclear:
             nuclearcap_state = pd.read_csv(
-                os.path.join(projpath,'io','nuclear','nuclear-GW-EIA860_2018-post{}.csv').format(
+                regeopath+'io/nuclear/nuclear-GW-EIA860_2018-post{}.csv'.format(
                     include_nuclear), 
                 index_col=0, squeeze=True,
             ).to_dict()
@@ -733,7 +724,7 @@ for case in runcases:
                 system.add_line(
                     name=name,
                     line=zephyr.cpm.Line(
-                        node1=node1, node2=node2,
+                        node1=node1, node2=node1,
                         distance=dfdistance.loc[node1,node2],
                         capacity=dftrans.loc[pair,'AC'],
                         defaults=defaults, name=name,
@@ -748,7 +739,7 @@ for case in runcases:
                 system.add_line(
                     name=name,
                     line=zephyr.cpm.Line(
-                        node1=node1, node2=node2,
+                        node1=node1, node2=node1,
                         distance=dfdistance.loc[node1,node2],
                         capacity=dftrans.loc[pair,'DC'],
                         defaults=defaults, name=name,
@@ -765,7 +756,7 @@ for case in runcases:
             if build_ac and (dftrans.loc[pair,'AC'] > 0):
                 name = '{}|{}_ac_new'.format(*pair)
                 line = zephyr.cpm.Line(
-                    node1=node1, node2=node2,
+                    node1=node1, node2=node1,
                     distance=dfdistance.loc[node1,node2],
                     voltage=build_ac_voltage,
                     defaults=defaults, name=name,
@@ -773,7 +764,7 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_ac
+                line.cost_annual = line.cost_annual * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
@@ -786,7 +777,7 @@ for case in runcases:
             if build_dc and (dftrans.loc[pair,'DC'] > 0) and (dftrans.loc[pair, 'AC'] == 0):
                 name = '{}|{}_dc_new'.format(*pair)
                 line = zephyr.cpm.Line(
-                    node1=node1, node2=node2,
+                    node1=node1, node2=node1,
                     distance=dfdistance.loc[node1,node2],
                     voltage='DC',
                     defaults=defaults, name=name,
@@ -794,14 +785,14 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_dc
+                line.cost_annual = line.cost_annual * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
         ### Add dispatchable generators based on defaults
         if include_gas:
             for node in nodes:
-                for gen in ['OCGT', 'CCGT']:
+                for gen in ['CCGT']: #['OCGT', 'CCGT']:
                     system.add_generator(
                         '{}_{}'.format(gen,node), 
                         zephyr.cpm.Gen(
@@ -822,10 +813,10 @@ for case in runcases:
         ### Add storage
         annualcost_E = zephyr.cpm.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_E
+        ).cost_annual_E * storscale
         annualcost_P = zephyr.cpm.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_P
+        ).cost_annual_P * storscale
         for node in nodes:
             ### Apply regional cost scaler, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -890,7 +881,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'pv'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * pvscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -908,9 +899,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + pv_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * transscale
                                 if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * transscale)
                         )
                     )
                     .add_capacity_bound_hi(pv_gwcap[node][jbin])
@@ -922,7 +913,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'wind'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * windscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -940,9 +931,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + wind_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * transscale
                                if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * transscale)
                         )
                     )
                     .add_capacity_bound_hi(wind_gwcap[node][jbin])
@@ -1022,3 +1013,5 @@ for case in runcases:
                 print(err)
                 sys.stdout.flush()
                 continue
+            # print('{:.2f} $/MWh'.format(output_values['lcoe']))
+            # sys.stdout.flush()

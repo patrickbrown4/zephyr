@@ -4,17 +4,19 @@ import os
 # datapath = os.path.expanduser('~/path/to/project/folder/Data/')
 ### Use these if project folder contains module folder
 projpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os.sep
-datapath = os.path.join(projpath, 'in') + os.sep
+datapath = os.path.join(projpath, 'in', '')
 
-### Use extdatapath if you store resource data in an external drive
-extdatapath = os.path.expanduser('~/../../Volumes/EXAMPLE/Data/')
+### extdatapath is where resource data is stored; can be an external drive or 
+### same as datapath
+# extdatapath = os.path.expanduser('~/../../Volumes/EXAMPLE/Data/')
+extdatapath = datapath
 
 apikeys = {
-    ### Get a googlemaps API key at 
+    ### Get an NREL API key at https://developer.nrel.gov/signup/
+    'nrel': 'yourAPIkey',
+    ### Googlemaps API key is optional, for use in zephyr.io.queryNSRDBfile()
     ### https://developers.google.com/maps/documentation/geocoding/get-api-key
     'googlemaps': 'yourAPIkey',
-    ### Get an NSRDB key at https://developer.nrel.gov/signup/
-    'nsrdb': 'yourAPIkey',
 }
 nsrdbparams = {
     ### Use '+' for spaces

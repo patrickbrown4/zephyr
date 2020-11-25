@@ -1,3 +1,22 @@
+"""
+Data available:
+[
+    'windspeed_10m', 'windspeed_40m', 'windspeed_60m',
+    'windspeed_80m', 'windspeed_100m', 'windspeed_120m', 
+    'windspeed_140m', 'windspeed_160m', 'windspeed_200m',
+    'pressure_0m', 'pressure_100m', 'pressure_200m',
+    'temperature_10m', 'temperature_40m', 'temperature_60m', 
+    'temperature_80m', 'temperature_100m', 'temperature_120m', 
+    'temperature_140m', 'temperature_160m', 'temperature_200m',
+    'relativehumidity_2m', 'temperature_2m',
+]
+Data needed for model:
+[
+    'windspeed_100m', 'temperature_100m', 'relativehumidity_2m', 'pressure_0m', 
+    'pressure_100m', 'pressure_200m',
+]
+"""
+
 ###############
 ### IMPORTS ###
 
@@ -12,38 +31,26 @@ from urllib.error import HTTPError
 
 import pickle, gzip
 
+import zephyr
 regeodatapath = zephyr.settings.extdatapath
 
-###################
-### BACKGROUND INFO
+#######################
+### ARGUMENT INPUTS ###
 
-data_subset = [
-    'windspeed_10m', 'windspeed_40m', 'windspeed_60m',
-    'windspeed_80m', 'windspeed_100m', 'windspeed_120m', 
-    'windspeed_140m', 'windspeed_160m', 'windspeed_200m',
-    'pressure_0m', 'pressure_100m', 'pressure_200m',
-    'temperature_10m', 'temperature_40m', 'temperature_60m', 
-    'temperature_80m', 'temperature_100m', 'temperature_120m', 
-    'temperature_140m', 'temperature_160m', 'temperature_200m',
-    'relativehumidity_2m', 'temperature_2m',
-]
+import argparse
+parser = argparse.ArgumentParser(description='Download WTK data')
+parser.add_argument('datum', type=str, default='windspeed_100m')
+### Parse argument inputs
+args = parser.parse_args()
+datum = args.datum
 
 ##########
 ### INPUTS
 
-# datum = 'relativehumidity_2m'
-datum = 'windspeed_100m'
-# datum = 'pressure_100m'
-# datum = 'temperature_100m'
-# datum = 'pressure_200m'
-# datum = 'windspeed_140m'
-# datum = 'temperature_140m'
-# datum = 'pressure_0m'
-
 skip = 2
 start = 0
 
-outpath = os.path.join(regeodatapath,'in','WTK-HSDS','every{}-offset{}','{}').format(
+outpath = os.path.join(regeodatapath,'WTK-HSDS','every{}-offset{}','{}').format(
     skip, start, datum)
 
 numattempts = 200

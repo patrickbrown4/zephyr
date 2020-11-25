@@ -7,25 +7,28 @@ import sys, os, site, math, time, requests
 from glob import glob
 from tqdm import tqdm, trange
 
+import zephyr
+projpath = zephyr.settings.projpath
+
+###################
+### ARGUMENT INPUTS
+
+import argparse
+parser = argparse.ArgumentParser(description='Download NSRDB data')
+parser.add_argument('years', type=str, default='2007,2008,2009,2010,2011,2012,2013', 
+                    help='years for NSRDB data (comma-delimited)')
+### Parse argument inputs
+args = parser.parse_args()
+years = [int(y) for y in args.years.split(',')]
+
 ##########
 ### INPUTS
 
-params = {
-    ### Use '+' for spaces
-    'api_key': '>>> input here',
-    'full_name': 'your+name',
-    'email': 'your@email.com', ### where you'll get globus emails with the data
-    'affiliation': 'your+affiliation',
-    'reason': 'your+reason',
-    'mailing_list': 'true',
-}
-
-years = [2018]
 psmversion = 3
 chunksize = 1000
 chunklistin = None
 pointsfile = os.path.join(
-    'io','usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv.csv')
+    projpath, 'io', 'usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv.csv')
 
 #############
 ### FUNCTIONS
@@ -75,28 +78,28 @@ def postNSRDBfiles(
     years,
     lonlats,
     psmversion=3,
-    api_key=params['api_key'],
+    api_key=zephyr.settings.apikeys['nrel'],
     attributes=(
         'ghi,dni,dhi,solar_zenith_angle,'
         + 'air_temperature,wind_speed'),
     leap_day='true', 
     interval='30', 
     utc='false', 
-    full_name=params['full_name'], 
-    reason=params['reason'], 
-    affiliation=params['affiliation'], 
-    email=params['email'], 
-    mailing_list=params['mailing_list'],):
+    full_name=zephyr.settings.nsrdbparams['full_name'], 
+    reason=zephyr.settings.nsrdbparams['reason'], 
+    affiliation=zephyr.settings.nsrdbparams['affiliation'], 
+    email=zephyr.settings.nsrdbparams['email'], 
+    mailing_list=zephyr.settings.nsrdbparams['mailing_list'],):
     """
     """
 
     ### Set url based on version of PSM
     if psmversion in [2, '2', 2.]:
-        url = 'http://developer.nrel.gov/api/solar/nsrdb_0512_download.json?api_key={}'.format(
+        url = 'https://developer.nrel.gov/api/solar/nsrdb_0512_download.json?api_key={}'.format(
             api_key)
         attributes = convertattributes_3to2(attributes)
     elif psmversion in [3, '3', 3.]:
-        url = 'http://developer.nrel.gov/api/solar/nsrdb_psm3_download.json?api_key={}'.format(
+        url = 'https://developer.nrel.gov/api/solar/nsrdb_psm3_download.json?api_key={}'.format(
             api_key)
         attributes = convertattributes_2to3(attributes)
     else:
@@ -121,8 +124,7 @@ def postNSRDBfiles(
     response = requests.request("POST", url, data=payload, headers=headers)
     
     output = response.text
-    print(output[output.find("errors"):output.find("inputs")], 
-      '\n', output[output.find("outputs"):])
+    print(output[output.find("outputs"):])
 
 ### Determine size of request
 def postNSRDBsize(

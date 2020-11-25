@@ -1,16 +1,42 @@
 # **ZEPHYR**: **Z**ero-emissions **E**lectricity system **P**lanning with **H**ourl**Y** operational **R**esolution
 
-Setup instructions
-------------------
+## Setup instructions
 * To set up your python environment, navigate to this directory and run:
     * `conda env create -f environment.yml`
     * `conda activate zephyr`
+* To use the renewable-energy supply-curve funcationality (not required for running the base capacity-expansion model), perform the following steps:
+    * Request an NREL API key from <https://developer.nrel.gov/signup/> and paste it into `apikeys['nrel']` in `settings.py`.
+    * Follow the instructions at <https://github.com/NREL/hsds-examples> to set up h5pyd for the NREL HSDS endpoint. Namely:
+        * Run `hsconfigure`
+        * At the prompt, enter the text after the `=`:
+            * hs_endpoint = `https://developer.nrel.gov/api/hsds`
+            * hs_username = `None`
+            * hs_password = `None`
+            * hs_api_key = the same NREL API key you pasted into `settings.py`
+        * These values will be stored in `~/.hscfg`
 
-Usage notes
------------
-* After setting up the environment, the core model can be run for an example full-US scenario using the command: `python zephyr-run-base.py 23 -o test -s clp` (argument descriptions are given within zephyr-run-base.py).
+## Usage notes
+### Capacity-planning model
+* `zephyr-run-base.py`
+    * After setting up the environment, the core model can be run for an example full-US scenario using the command: `python zephyr-run-base.py 23 -o test -s clp`. Arguments: `23` indicates the case to use from `cases-test.xlsx` (i.e. the full US at PA resolution over 2007–2013 with new transmission allowed); `-o test` indicates the folder in which to store the outputs; `-s clp` indicates theat the COIN-LP solver should be used.
+### Renewable-energy supply curves
 * VRE supply curve functionality has not yet been fully tested in this environment.
-* To use the NSRDB download functions, you will need to modify the "settings.py" file to insert a valid NSRDB API key, which can be requested from <https://developer.nrel.gov/signup/>. Locations can be specified by passing latitude, longitude floats to zephyr.data.downloadNSRDBfile(), or by passing a string googlemaps query to zephyr.io.queryNSRDBfile(). To use the googlemaps functionality, you will need to request a googlemaps API key (<https://developers.google.com/maps/documentation/javascript/get-api-key>) and insert it in the "settings.py" file.
+* `vresc_0-nsrdb-download-icosahedralmesh.py`
+    * Submits download requests for NSRDB (solar) data. Before use, update `nsrdbparams` in `settings.py` with your email address and other info. Once the downloads are prepared you will receive emails at the address you provided with links to download the data. By default, requests are submitted in 1000-site chunks for 41990 sites over the continental US in 1-year batches from 20007–2013.
+* `vresc_0-download-wtkhsds-geoslice.py`
+    * Downloads WIND Toolkit (WTK) data. To increase download speed, we download the data in single-timestamp slices over the full array of points, downsampled by a factor of 2x2 (i.e. at 4km resolution instead of 2km resolution).
+* `vresc_1-wtk-hsds-timeslice-to-timeseries.py`
+    * Reshapes the single-timestamp all-points WTK data into single-point all-timestamps to match the format of the NSRDB data.
+* `vresc_2-polyavailable-states.py`
+    * 
+* `vresc_3-sitearea-zoneoverlap.py`
+    * 
+* `vresc_4-transmission-site-distance.py`
+    * 
+* `vresc_5-cfsim-lcoebins.py`
+    * 
+* `vresc_6-cfsim-binsum.py`
+    * 
 
 Sources
 -------
