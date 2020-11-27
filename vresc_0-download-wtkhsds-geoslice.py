@@ -32,7 +32,7 @@ from urllib.error import HTTPError
 import pickle, gzip
 
 import zephyr
-regeodatapath = zephyr.settings.extdatapath
+extdatapath = zephyr.settings.extdatapath
 
 #######################
 ### ARGUMENT INPUTS ###
@@ -50,7 +50,7 @@ datum = args.datum
 skip = 2
 start = 0
 
-outpath = os.path.join(regeodatapath,'WTK-HSDS','every{}-offset{}','{}').format(
+outpath = os.path.join(extdatapath,'WTK-HSDS','every{}-offset{}','{}').format(
     skip, start, datum)
 
 numattempts = 200

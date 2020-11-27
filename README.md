@@ -26,6 +26,7 @@
 * **VRE supply curve functionality has not yet been fully tested in this environment.**
 * `vresc_-1-icomesh.py`
     * Generates the icosahedral mesh used to define NSRDB (solar) points.
+        * Outputs: `io/usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-{subdiv}subdiv.csv`
 * `vresc_0-nsrdb-download-icosahedralmesh.py`
     * Submits download requests for NSRDB (solar) data. Before use, update `nsrdbparams` in `settings.py` with your email address and other info. Once the downloads are prepared you will receive emails at the address you provided with links to download the data. By default, requests are submitted in 1000-site chunks for 41990 sites over the continental US in 1-year batches from 20007–2013.
 * `vresc_0-download-wtkhsds-geoslice.py`
@@ -33,15 +34,18 @@
 * `vresc_1-wtk-hsds-timeslice-to-timeseries.py`
     * Reshapes the single-timestamp all-points WTK data into single-point all-timestamps to match the format of the NSRDB data.
 * `vresc_2-polyavailable-states.py`
-    * 
+    * Creates and saves a polygon of available area for wind and solar development within each zone accounting for different land exclusions.
+        * Outputs: `io/geo/developable-area/{zonesource}/polyavailable-water,parks,native,mountains,urban-{zonesource}_{zone}.poly.p`
 * `vresc_3-sitearea-zoneoverlap.py`
-    * 
+    * Calculates the overlap area between the available area for PV and wind calculated in `vresc_2-polyavailale-states.py` and Vornoi polygons around the NSRDB and WTK points.
+        * Outputs: `io/geo/developable-area/{zonesource}/{resource}/sitearea-water,parks,native,moutains,urban-{zonesource}_{zone}.csv`
 * `vresc_4-transmission-site-distance.py`
-    * 
-* `vresc_5-cfsim-lcoebins.py`
-    * 
-* `vresc_6-cfsim-binsum.py`
-    * 
+    * Determines the interconnection (spur-line + trunk-line reinforcement) cost for each solar and wind site.
+        * Outputs: `io/cf-2007_2013/{transcostmultiplier}x/{level}/{resource}/distance-station_urbanedge-mincost/{resource}-urbanU-trans230-{level}_{zone}.csv`
+* `vresc_5-cfsim-lcoebins.py`, `vresc_6-cfsim-binsum.py`
+    * Simulates the levelized cost of electricity (LCOE) and hourly capacity factor (CF) for each solar/wind site within a given zone. Bins sites by LCOE, then calculates the weighted-average hourly CF (weighted by developable area associated with each site) for each bin. Saves the weighted-average hourly CF and total developable area within each bin.
+    * If running for PV on a machine with sufficient memory, use the `-f` flag when runnning `vresc_5-cfsim-lcoebins.py` to perform the entire procedure in one shot.
+    * If running for wind, run `vresc_5-cfsim-lcoebins.py` without the `-f` flag to perform the binning procedure, then run `vresc_6-cfsim-binsum.py` to generate the hourly CF profiles.
 
 Sources
 -------

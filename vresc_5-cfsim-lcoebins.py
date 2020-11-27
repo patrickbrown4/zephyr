@@ -165,12 +165,11 @@ loss_system_wind = 0.19 ### Owen Roberts NREL 20200331
 loss_distance = 0.01/1.60934/100
 
 ### Set output file location and savenames
-inpath = regeopath
 distancepath = os.path.join(
-    inpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}',''
+    projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}',''
 ).format(urban,transcostmultiplier,'state')
 outpath = os.path.join(
-    regeopath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}','{}',''
+    projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}','{}',''
 ).format(urban,transcostmultiplier,level,resource)
 if resource == 'wind':
     outpath = os.path.join(outpath, model.replace(':','|').replace('/','_'))
@@ -181,9 +180,7 @@ elif resource == 'pv':
 resolution = 16
 
 ### Get region file
-dfregion = pd.read_csv(
-    os.path.join(regeopath,'io','regions_20191211.csv'), 
-    index_col=0, header=[0,1])['area']
+dfregion = pd.read_csv(os.path.join(projpath,'io','regions.csv'), index_col=0)
 
 ### Get states to loop over
 states = dfregion.loc[dfregion[level]==zone].index.values
@@ -197,12 +194,12 @@ if resource == 'pv':
     resourcedatapath = os.path.join(extdatapath,'in','NSRDB','ico9')
 
     # weightsfile = (
-    #     inpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
+    #     projpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
     #     'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
     # ).format(level, level, zone)
     weightsfile = {
         state: os.path.join(
-            inpath,'io','geo','developable-area','{}','nsrdb-icomesh9',
+            projpath,'io','geo','developable-area','{}','nsrdb-icomesh9',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format('state', 'state', state)
         for state in states
@@ -240,7 +237,7 @@ elif resource == 'wind':
 
     weightsfile = {
         state: os.path.join(
-            inpath,'io','geo','developable-area','{}','wtk-hsds-every2',
+            projpath,'io','geo','developable-area','{}','wtk-hsds-every2',
             'sitearea-water,parks,native,mountains,urban-{}_{}.csv'
         ).format('state', 'state', state)
         for state in states
@@ -325,7 +322,7 @@ dfdistance = pd.concat(
 if resource == 'pv':
     ###### Load points to model
     dfcoords = pd.read_csv(
-        os.path.join(regeopath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+        os.path.join(projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
     ### Merge sites with calculated land area
     dfsites = dfcoords.merge(polyweights, on=index_coords, how='inner')
     ### Create the PV system
@@ -373,7 +370,7 @@ elif resource == 'wind':
     dfout = zephyr.wind.windsim_hsds_timeseries(
         rowf_colfs=rowf_colfs, height=height, 
         number_of_turbines=number_of_turbines, powercurvesource=powercurvesource, 
-        model=model, nans='raise', timeseries=runtype, regeodatapath=extdatapath,
+        model=model, nans='raise', timeseries=runtype, extdatapath=extdatapath,
         windpath=resourcedatapath, verbose=True, fulloutput=fulloutput,
         pc_vmax=pc_vmax, temp_cutoff=temp_cutoff,
     ) * (1 - loss_system_wind)

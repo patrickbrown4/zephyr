@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import os, sys, math
 import geopandas as gpd
+import shapely
 from tqdm import tqdm, trange
 
 ### Only need zephyr for projpath
@@ -155,7 +156,7 @@ def icomesh(subdiv=0, rotax1='x', rotang1=0., rotax2='x', rotang2=0.):
         return index
 
     ## Loop and make the subdivisions
-    for i in trange(subdiv):
+    for i in trange(subdiv, desc='subdivisions:'):
         faces_subdiv = []
 
         for tri in faces:
@@ -230,8 +231,9 @@ biggest_poly = max([
 us_contig_index = [
     len(dfmap.geometry[0][i].__str__()) 
     for i in range(len(dfmap.geometry[0]))].index(biggest_poly)
-usa_centroid_lon = dfmap.geometry[0][us_contig_index].centroid.x
-usa_centroid_lat = dfmap.geometry[0][us_contig_index].centroid.y
+usa_poly = dfmap.loc[0,'geometry'][us_contig_index]
+usa_centroid_lon = usa_poly.centroid.x
+usa_centroid_lat = usa_poly.centroid.y
 
 ###### Make the icosahedral mesh
 #### Rotate the icosahedron to give roughly uniform spacing over US
@@ -257,10 +259,10 @@ lonlats = (lons, lats)
 lonlats = pd.DataFrame(data=list(zip(lons, lats)), columns=['lon', 'lat'], dtype=float)
 
 ### USA:
-lonmax = usa[0]['geometry']['viewport']['northeast']['lng'] + 3
-latmax = usa[0]['geometry']['viewport']['northeast']['lat'] + 3
-lonmin = usa[0]['geometry']['viewport']['southwest']['lng'] - 3
-latmin = usa[0]['geometry']['viewport']['southwest']['lat'] - 3
+lonmax = usa_poly.bounds[2] + 3
+latmax = usa_poly.bounds[3] + 3
+lonmin = usa_poly.bounds[0] - 3
+latmin = usa_poly.bounds[1] - 3
 
 points = lonlats[
     (lonlats['lon'] <= lonmax)
@@ -281,4 +283,4 @@ savename = 'usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-{}subdiv'.fo
 
 pd.DataFrame(
     usapoints, columns=['lon', 'lat']
-).to_csv(os.path.join('io,{}.csv').format(savename), index=False)
+).to_csv(os.path.join('io','{}.csv').format(savename), index=False)

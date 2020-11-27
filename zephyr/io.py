@@ -46,8 +46,6 @@ def getNSRDBfile(filepath, filename, year, resolution=30, forcemidnight=False):
     else:
         dfsun.index = pd.to_datetime(dfsun[['Year', 'Month', 'Day', 'Hour', 'Minute']])
         if year == 'tmy': 
-            ### Changed on 20180105 to work with site-solar-cf-opt-3-regeo.py
-            # del dfsun['Unnamed: 10']
             dfsun.drop('Unnamed: 10', axis=1, errors='ignore', inplace=True)
 
     dfsun.index = dfsun.index.tz_localize(tz)
@@ -150,9 +148,7 @@ def queryNSRDBfile(filename=None, year=None, filepath=None, resolution=None,
             periods=yearhours(year)*60/resolution))
     else:
         dfsun.index = pd.to_datetime(dfsun[['Year', 'Month', 'Day', 'Hour', 'Minute']])
-        if year == 'tmy': 
-            ### Changed on 20180105 to work with site-solar-cf-opt-3-regeo.py
-            # del dfsun['Unnamed: 10']
+        if year == 'tmy':
             dfsun.drop('Unnamed: 10', axis=1, errors='ignore', inplace=True)
 
     dfsun.index = dfsun.index.tz_localize(tz)

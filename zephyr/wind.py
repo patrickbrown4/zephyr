@@ -595,7 +595,7 @@ def windsim_hsds_sites(
     rowf_colfs, height=100, number_of_turbines=1,
     powercurvesource='wtk', model='WTKclass2', pc_vmax=50,
     temp_cutoff=None, desc='CF',
-    nans='raise', timeseries=None, regeodatapath=None,
+    nans='raise', timeseries=None, extdatapath=None,
     windpath=None, verbose=True, fulloutput=True):
     """
     Inputs
@@ -604,7 +604,7 @@ def windsim_hsds_sites(
     """
     ###### Format inputs
     if windpath is None:
-        winddatapath = regeodatapath + 'in/WTK-HSDS/every2-offset0/'
+        winddatapath = extdatapath + 'in/WTK-HSDS/every2-offset0/'
     else:
         winddatapath = windpath
 
@@ -688,7 +688,7 @@ def windsim_hsds_timeseries(
     rowf_colfs, height=100, number_of_turbines=1,
     powercurvesource='wtk', model='WTKclass2', pc_vmax=60,
     temp_cutoff=None, desc='CF',
-    nans='raise', timeseries=None, regeodatapath=None,
+    nans='raise', timeseries=None, extdatapath=None,
     windpath=None, verbose=True, fulloutput=True,
     progressbar=True):
     """
@@ -699,7 +699,7 @@ def windsim_hsds_timeseries(
     ###### Format inputs
     if windpath is None:
         winddatapath = (
-            regeodatapath 
+            extdatapath 
             + 'in/WTK-HSDS/every2-offset0//timeseries/usa-halfdegbuff/')
     else:
         winddatapath = windpath
