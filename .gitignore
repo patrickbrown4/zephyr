@@ -20,3 +20,7 @@ results/
 
 # inputs folders
 in/
+
+# individual large files which are created by included scripts
+io/usa-points*
+io/world-points*

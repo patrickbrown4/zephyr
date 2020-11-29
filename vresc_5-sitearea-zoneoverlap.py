@@ -105,7 +105,7 @@ elif resource == 'nsrdb-icomesh9':
     dfcoords = pd.read_csv(
         os.path.join(
             projpath,'io',
-            'world-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-9subdiv-psm3id.csv'),
+            'world-points-icomesh-9subdiv-psm3id.csv'),
         dtype={'psm3id':'category'}
     )
     dfcoords = dfcoords.loc[dfcoords.psm3id.notnull()].copy()

@@ -20,7 +20,7 @@ projpath = zephyr.settings.projpath
 ### ARGUMENT INPUTS ###
 import argparse
 parser = argparse.ArgumentParser(description='Create US icosahedral mesh')
-parser.add_argument('subdiv', type=int, default=9, help='number of edge subdivisions')
+parser.add_argument('-s', '--subdiv', type=int, default=9, help='number of edge subdivisions')
 ### Parse arguments
 args = parser.parse_args()
 subdiv = args.subdiv
@@ -253,12 +253,14 @@ lats_0 = [lonlatify(vert)[1] for vert in verts_0]
 verts, faces = icomesh(subdiv, rotax1, rotang1, rotax2, rotang2)
 lons = [lonlatify(vert)[0] for vert in verts]
 lats = [lonlatify(vert)[1] for vert in verts]
-lonlats = (lons, lats)
-
-###### Merge with US shapefile
 lonlats = pd.DataFrame(data=list(zip(lons, lats)), columns=['lon', 'lat'], dtype=float)
 
-### USA:
+### Save full collection of points
+saveworld = 'world-points-icomesh-{}subdiv'.format(
+    subdiv)
+lonlats.to_csv(os.path.join(projpath,'io','{}.csv').format(saveworld), index=False)
+
+###### Mask points to US boundary
 lonmin = usa_poly.bounds[0] - 3
 latmin = usa_poly.bounds[1] - 3
 lonmax = usa_poly.bounds[2] + 3
@@ -271,7 +273,6 @@ points = lonlats[
     & (lonlats['lat'] >= latmin)
 ].values
 
-### Mask points to US boundary
 usapoints = []
 for i in trange(len(points), desc='mask to USA boundary'):
     point = shapely.geometry.Point(points[i])
@@ -279,8 +280,39 @@ for i in trange(len(points), desc='mask to USA boundary'):
         usapoints.append(points[i])
 
 ### Write it
-savename = 'usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-{}subdiv'.format(subdiv)
+saveusa = 'usa-points-icomesh-{}subdiv'.format(subdiv)
 
 pd.DataFrame(
     usapoints, columns=['lon', 'lat']
-).to_csv(os.path.join('io','{}.csv').format(savename), index=False)
+).to_csv(os.path.join(projpath,'io','{}.csv').format(saveusa), index=False)
+
+###### Line up world points with NSRDB id's (for later use with polygons outside of US boundary)
+dfworld = pd.read_csv(os.path.join(projpath,'io','{}.csv').format(saveworld))
+dfusa = pd.read_csv(
+    os.path.join(projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+### Loop through each dfworld point within a bounding box of dfusa, assign to closest dfusa point
+regionbuffer = 2
+regionbounds = {
+    'longitude': [dfusa.ico9lon.min()-regionbuffer, dfusa.ico9lon.max()+regionbuffer], 
+    'latitude': [dfusa.ico9lat.min()-regionbuffer, dfusa.ico9lat.max()+regionbuffer], 
+}
+dfquery = dfworld.loc[
+    (dfworld.lon >= regionbounds['longitude'][0])
+    & (dfworld.lon <= regionbounds['longitude'][1])
+    & (dfworld.lat >= regionbounds['latitude'][0])
+    & (dfworld.lat <= regionbounds['latitude'][1])
+].copy()
+### Loop over dfquery points, find latlon-closest dfusa point
+usaindices = zephyr.toolbox.closestpoint_simple(
+    querylons=dfquery.lon.values, querylats=dfquery.lat.values,
+    reflons=dfusa.ico9lon.values, reflats=dfusa.ico9lat.values,
+    verbose=True
+)
+dfquery['psm3id'] = dfusa.loc[usaindices, 'psm3id'].values
+dfworld['psm3id'] = None
+dfworld.loc[dfquery.index, 'psm3id'] = dfquery.psm3id.values
+### Save it
+saveworldlabeled = (
+    'world-points-icomesh-{}subdiv-psm3id.csv'.format(
+        subdiv))
+dfworld.to_csv(os.path.join(projpath,'io',saveworldlabeled), index=False)

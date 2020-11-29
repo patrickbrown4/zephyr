@@ -28,7 +28,7 @@
     * Downloads some input data (primarily shapefile maps) from public sources and creates the US states zone map.
 * `vresc_1-icomesh.py`
     * Generates the icosahedral mesh used to define NSRDB (solar) points.
-        * Outputs: `io/usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-{subdiv}subdiv.csv`
+        * Outputs: `io/usa-points-icomesh-{subdiv}subdiv.csv`
 * `vresc_2-nsrdb-download-icosahedralmesh.py`
     * Submits download requests for NSRDB (solar) data. Before use, update `nsrdbparams` in `settings.py` with your email address and other info. Once the downloads are prepared you will receive emails at the address you provided with links to download the data. By default, requests are submitted in 1000-site chunks for 41990 sites over the continental US in 1-year batches from 20007–2013, yielding 42 emails and zip files per year. 
     * After downloading the zip files from the links in the emails, unzip them into `{datapath}/in/NSRDB/ico9/{year}/v3/` (if using a local datapath) or `{extdatapath}/in/NSRDB/ico9/{year}/v3/` (if using an external drive).
