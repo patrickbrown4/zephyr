@@ -322,7 +322,7 @@ dfdistance = pd.concat(
 if resource == 'pv':
     ###### Load points to model
     dfcoords = pd.read_csv(
-        os.path.join(projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+        os.path.join(projpath,'io','geo','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
     ### Merge sites with calculated land area
     dfsites = dfcoords.merge(polyweights, on=index_coords, how='inner')
     ### Create the PV system

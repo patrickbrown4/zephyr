@@ -284,12 +284,12 @@ for zone in zones:
     ###### Load site dataframes
     if resource == 'pv':
         dfcoords = pd.read_csv(os.path.join(
-            projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+            projpath,'io','geo','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
 
     elif resource == 'wind':
         ### Load HSDS points
         dfcoords = pd.read_csv(
-            os.path.join(projpath,'io','wind','hsdscoords.gz')
+            os.path.join(projpath,'io','geo','hsdscoords.gz')
         ).rename(columns={'row':'row_full','col':'col_full'})
         ### Make the lookup index
         dfcoords['rowf_colf'] = (

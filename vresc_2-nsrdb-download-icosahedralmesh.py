@@ -27,7 +27,7 @@ years = [int(y) for y in args.years.split(',')]
 psmversion = 3
 chunksize = 1000
 chunklistin = None
-pointsfile = os.path.join(projpath, 'io', 'usa-points-icomesh-9subdiv.csv')
+pointsfile = os.path.join(projpath,'io','geo','usa-points-icomesh-9subdiv.csv')
 
 #############
 ### FUNCTIONS

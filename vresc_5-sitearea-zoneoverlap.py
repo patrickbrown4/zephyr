@@ -104,7 +104,7 @@ elif resource == 'nsrdb-icomesh9':
     ### Have to use extra points beyond edge of US, same as for wind
     dfcoords = pd.read_csv(
         os.path.join(
-            projpath,'io',
+            projpath,'io','geo',
             'world-points-icomesh-9subdiv-psm3id.csv'),
         dtype={'psm3id':'category'}
     )

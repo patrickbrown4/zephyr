@@ -10,11 +10,8 @@ Data available:
     'temperature_140m', 'temperature_160m', 'temperature_200m',
     'relativehumidity_2m', 'temperature_2m',
 ]
-Data needed for model:
-[
-    'windspeed_100m', 'temperature_100m', 'relativehumidity_2m', 'pressure_0m', 
-    'pressure_100m', 'pressure_200m',
-]
+Data needed for model if only using 100m height:
+['windspeed_100m', 'temperature_100m', 'relativehumidity_2m', 'pressure_100m']
 """
 
 ###############

@@ -258,7 +258,7 @@ lonlats = pd.DataFrame(data=list(zip(lons, lats)), columns=['lon', 'lat'], dtype
 ### Save full collection of points
 saveworld = 'world-points-icomesh-{}subdiv'.format(
     subdiv)
-lonlats.to_csv(os.path.join(projpath,'io','{}.csv').format(saveworld), index=False)
+lonlats.to_csv(os.path.join(projpath,'io','geo','{}.csv').format(saveworld), index=False)
 
 ###### Mask points to US boundary
 lonmin = usa_poly.bounds[0] - 3
@@ -284,12 +284,12 @@ saveusa = 'usa-points-icomesh-{}subdiv'.format(subdiv)
 
 pd.DataFrame(
     usapoints, columns=['lon', 'lat']
-).to_csv(os.path.join(projpath,'io','{}.csv').format(saveusa), index=False)
+).to_csv(os.path.join(projpath,'io','geo','{}.csv').format(saveusa), index=False)
 
 ###### Line up world points with NSRDB id's (for later use with polygons outside of US boundary)
-dfworld = pd.read_csv(os.path.join(projpath,'io','{}.csv').format(saveworld))
+dfworld = pd.read_csv(os.path.join(projpath,'io','geo','{}.csv').format(saveworld))
 dfusa = pd.read_csv(
-    os.path.join(projpath,'io','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
+    os.path.join(projpath,'io','geo','icomesh-nsrdb-info-key-psmv3-eGRID-avert-ico9.csv'))
 ### Loop through each dfworld point within a bounding box of dfusa, assign to closest dfusa point
 regionbuffer = 2
 regionbounds = {
@@ -315,4 +315,4 @@ dfworld.loc[dfquery.index, 'psm3id'] = dfquery.psm3id.values
 saveworldlabeled = (
     'world-points-icomesh-{}subdiv-psm3id.csv'.format(
         subdiv))
-dfworld.to_csv(os.path.join(projpath,'io',saveworldlabeled), index=False)
+dfworld.to_csv(os.path.join(projpath,'io','geo',saveworldlabeled), index=False)

@@ -22,5 +22,6 @@ results/
 in/
 
 # individual large files which are created by included scripts
-io/usa-points*
-io/world-points*
+io/geo/usa-points*
+io/geo/world-points*
+io/geo/hsdscoords*
