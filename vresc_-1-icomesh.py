@@ -259,10 +259,10 @@ lonlats = (lons, lats)
 lonlats = pd.DataFrame(data=list(zip(lons, lats)), columns=['lon', 'lat'], dtype=float)
 
 ### USA:
-lonmax = usa_poly.bounds[2] + 3
-latmax = usa_poly.bounds[3] + 3
 lonmin = usa_poly.bounds[0] - 3
 latmin = usa_poly.bounds[1] - 3
+lonmax = usa_poly.bounds[2] + 3
+latmax = usa_poly.bounds[3] + 3
 
 points = lonlats[
     (lonlats['lon'] <= lonmax)

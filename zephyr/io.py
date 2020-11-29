@@ -42,7 +42,7 @@ def getNSRDBfile(filepath, filename, year, resolution=30, forcemidnight=False):
     if type(year) == int and forcemidnight == True:
         dfsun = dfsun.set_index(pd.date_range('1/1/{yr}'.format(yr=year), 
             freq=str(resolution)+'Min', 
-            periods=yearhours(year)*60/resolution))
+            periods=zephyr.toolbox.yearhours(year)*60/resolution))
     else:
         dfsun.index = pd.to_datetime(dfsun[['Year', 'Month', 'Day', 'Hour', 'Minute']])
         if year == 'tmy': 
@@ -145,7 +145,7 @@ def queryNSRDBfile(filename=None, year=None, filepath=None, resolution=None,
     if type(year) == int and forcemidnight == True:
         dfsun = dfsun.set_index(pd.date_range('1/1/{yr}'.format(yr=year), 
             freq=str(resolution)+'Min', 
-            periods=yearhours(year)*60/resolution))
+            periods=zephyr.toolbox.yearhours(year)*60/resolution))
     else:
         dfsun.index = pd.to_datetime(dfsun[['Year', 'Month', 'Day', 'Hour', 'Minute']])
         if year == 'tmy':

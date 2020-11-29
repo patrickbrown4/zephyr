@@ -579,7 +579,7 @@ def voronoi_polygons(dfpoints):
      'from-voronoi-tessellation-to-shapely-polygons)
     
     """
-    import shapely, scipy.spatial, pyproj
+    import shapely, scipy, scipy.spatial, pyproj
     import geopandas as gpd
     
     ### Get latitude and longitude column names

@@ -7,6 +7,9 @@ import pandas as pd
 from tqdm import tqdm, trange
 from glob import glob
 
+import zephyr
+
+### Common paths
 projpath = zephyr.settings.projpath
 datapath = zephyr.settings.datapath
 extdatapath = zephyr.settings.extdatapath

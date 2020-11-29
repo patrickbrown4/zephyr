@@ -4,6 +4,7 @@ import sys, os, site, zipfile, math, time, json, pickle
 from glob import glob
 from tqdm import tqdm, trange
 import scipy, scipy.optimize
+from warnings import warn
 
 import pvlib
 
@@ -922,7 +923,7 @@ def solarvalue_compute(
 
     if len(output_ac) != len(dflmp):
         print('Something probably went wrong with leap years')
-        print('NSRDBfile = {}'.format(dfin.loc[i, latlonindex]))
+        print('NSRDBfile = {}'.format(nsrdbfile))
         print('lmpfile = {}'.format(lmpfile))
         print('len(output_ac.index) = {}'.format(len(output_ac.index)))
         print('len(dflmp.index) = {}'.format(len(dflmp.index)))
