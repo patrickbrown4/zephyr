@@ -5,7 +5,7 @@ import pandas as pd
 import os, sys, math
 import geopandas as gpd
 import shapely
-import urllib.request, zipfile, tarfile
+import urllib.request, zipfile, tarfile, pickle
 from tqdm import tqdm, trange
 
 ### Only need zephyr for projpath
@@ -52,18 +52,23 @@ files = [
         ('https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Hydrography/'
          'wtrbdyp010g.shp_nt00886.tar.gz')
     ),
+    (
+        os.path.join('in','Maps','NPS',''),
+        'nps_boundary',
+        'https://irma.nps.gov/DataStore/DownloadFile/647685'
+    ),
 ]
 
 ### Loop over files
 for (filepath, filename, url) in files:
     ### Download it
     os.makedirs(filepath, exist_ok=True)
-    if '.zip' in url:
-        suffix = '.zip'
-    elif '.tar.gz' in url:
+    if '.tar.gz' in url:
         suffix = '.tar.gz'
     elif '.gz' in url:
         suffix = '.gz'
+    else:
+        suffix = '.zip'
     urllib.request.urlretrieve(url, os.path.join(filepath,filename+suffix))
     ### Unzip it
     if '.tar' in suffix:
@@ -97,3 +102,11 @@ os.makedirs(os.path.join(projpath,'in','Maps','states'), exist_ok=True)
 dfzones.to_file(os.path.join(projpath,'in','Maps','states'))
 
 ###### Prepare the national parks polygon to save time
+parks = gpd.read_file(datapath+'Maps/NPS/nps_boundary/')
+allparks = parks.loc[~parks.STATE.isin(['AK','HI','GU','MP','PR','AS','VI'])].copy()
+allparks['dummy'] = 0
+allparks = allparks.dissolve('dummy')
+polyallparks = allparks.loc[0, 'geometry']
+### Save it
+with open(os.path.join(projpath,'in','Maps','NPS','nationalparks-all-poly.p'), 'wb') as p:
+    pickle.dump(polyallparks, p)

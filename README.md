@@ -24,8 +24,8 @@
         * `-s clp` indicates that the COIN-LP solver should be used. `-s gurobi` also works if you have gurobi installed with a working license.
 ### Renewable-energy supply curves
 * **VRE supply curve functionality has not yet been fully tested in this environment.**
-* `vresc_-2-downloadfiles.py`
-    * Downloads some input data (primarily shapefile maps) from public sources.
+* `vresc_-2-prepare-shapefiles.py`
+    * Downloads some input data (primarily shapefile maps) from public sources and creates the US states zone map.
 * `vresc_-1-icomesh.py`
     * Generates the icosahedral mesh used to define NSRDB (solar) points.
         * Outputs: `io/usa-points-icomesh-x[-atan(invPHI)+90-lat-11]-z[90+lon]-{subdiv}subdiv.csv`
