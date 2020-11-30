@@ -166,11 +166,11 @@ loss_distance = 0.01/1.60934/100
 
 ### Set output file location and savenames
 distancepath = os.path.join(
-    projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}',''
-).format(urban,transcostmultiplier,'state')
+    projpath,'io','cf-2007_2013','{}x','{}',''
+).format(transcostmultiplier,'state')
 outpath = os.path.join(
-    projpath,'io','cf-2007_2013','v08_states-LCOE-transloss-urban{}','{}x','{}','{}',''
-).format(urban,transcostmultiplier,level,resource)
+    projpath,'io','cf-2007_2013','{}x','{}','{}',''
+).format(transcostmultiplier,level,resource)
 if resource == 'wind':
     outpath = os.path.join(outpath, model.replace(':','|').replace('/','_'))
 elif resource == 'pv':

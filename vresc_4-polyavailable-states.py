@@ -21,9 +21,13 @@ extdatapath = zephyr.settings.extdatapath
 import argparse
 parser = argparse.ArgumentParser(description='polyavailable states')
 parser.add_argument(
-    '-z', '--zone', help='zone name (state abbreviation)', type=str)
+    '-z', '--zone', type=str, help='zone name (such as state abbreviation)',)
+parser.add_argument(
+    '-s', '--zonesource', type=str, default='state',
+    help='shapefile from which to read zones (located at in/Maps/{zonesource}/)',)
 args = parser.parse_args()
 zone = args.zone
+zonesource = args.zonesource
 
 ### Parse the input into a state if necessary
 statenumber2state = dict(zip(
@@ -48,25 +52,14 @@ except ValueError:
 ##############
 ### INPUTS ###
 
-zonesource = 'state'
-usafile = os.path.join(
-    datapath,'Maps','HIFLD','Political_Boundaries_Area','Political_Boundaries_Area.shp')
-dfzones = gpd.read_file(usafile)
-
-dfzones = dfzones.loc[
-    (dfzones.COUNTRY=='USA')
-    & ~(dfzones.NAME.isin(
-        ["water/agua/d'eau", "Puerto Rico", 
-         "Alaska", "Hawaii",
-         "United States Virgin Islands", "Navassa Island",
-        ])),
-    ['STATEABB','geometry']
-].dissolve('STATEABB')
-
-dfzones = dfzones.reset_index().rename(columns={'STATEABB':'state'})
-dfzones.state = dfzones.state.map(lambda x: x.replace('US-',''))
+zonefile = os.path.join(datapath,'Maps',zonesource)
+dfzones = gpd.read_file(zonefile)
 
 neighborstates = {
+    ### If using a zonesource other than "state", should add entries to this dict
+    ### giving the list of states contained within and adjacent to each zone in zonesource.
+    ### Otherwise we use urban areas and water bodies for the full US, which slows down
+    ### the execution.
     'AL': ['AL','MS','TN','GA','FL'],
     'AK': ['AK',],
     'AZ': ['AZ','CA','NV','UT','CO','NM'],
@@ -133,10 +126,13 @@ outpath = os.path.join(projpath,'io','geo','developable-area','{}').format(zones
 os.makedirs(outpath, exist_ok=True)
 print(os.path.join(outpath,savename))
 
-
 ### Get zone polygon
-dfzone = dfzones.loc[dfzones.state == zone].reset_index(drop=True).copy()
+dfzone = dfzones.loc[dfzones[zonesource] == zone].reset_index(drop=True).copy()
 polyzone = dfzone.loc[0,'geometry'].buffer(0.)
+
+### Get neighboring states from neighborstates; otherwise use all states
+allstates = [s for s in zephyr.toolbox.usps if s not in ['AK','HI']]
+zonestates = neighborstates.get(zone, allstates)
 
 ### Get bounding box for region, add 0.5° buffer
 regionbounds = {
@@ -164,7 +160,7 @@ dfurban_all = gpd.read_file(os.path.join(
     datapath,'Maps','Census','urbanarea','tl_2010_us_uac10','tl_2010_us_uac10.shp'))
 
 dfurban_states = dfurban_all.loc[
-    dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in neighborstates[zone])
+    dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in zonestates)
 ].copy()
 
 ### Merge all the urban areas, since we don't need to know which is which
@@ -208,7 +204,7 @@ water = water.loc[
 
 ### Get subset of water within modeled region
 regionwater = water.loc[water.State.map(
-    lambda x: any([state in x for state in neighborstates[zone]]))].copy()
+    lambda x: any([state in x for state in zonestates]))].copy()
 
 regionwater['dummy'] = 0
 regionwater = regionwater.dissolve('dummy')
