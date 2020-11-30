@@ -211,7 +211,7 @@ if resource == 'pv':
     distancefile = {
         state: os.path.join(
             distancepath,'pv','distance-station_urban{}-mincost',
-            + 'nsrdb,icomesh9-urbanU-trans230-{}_{}.csv'
+            'nsrdb,icomesh9-urbanU-trans230-{}_{}.csv'
         ).format(urban, 'state', state)
         for state in states
     }

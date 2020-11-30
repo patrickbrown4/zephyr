@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
+import sys, os
 import scipy, scipy.optimize
+
+mfile = os.path.abspath(__file__)
+mpath = os.path.dirname(mfile)
 
 #############
 ### STATS ###
@@ -73,7 +77,7 @@ def inflate(yearin=None, yearout=2017, value=None):
     download .xlsx file and save at projpath+'Data/BLS/inflation_cpi_level.xlsx'
     """
     ### Set filepaths
-    file_inflation_level = datapath + 'BLS/inflation_cpi_level.xlsx'
+    file_inflation_level = os.path.join(mpath,'data','BLS','inflation_cpi_level.xlsx')
     
     ### Load the file
     try:

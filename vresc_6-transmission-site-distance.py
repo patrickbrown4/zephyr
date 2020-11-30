@@ -172,10 +172,9 @@ lon = {'pv':'Longitude', 'wind':'longitude'}
 ##### https://hifld-geoplatform.opendata.arcgis.com/datasets/electric-power-transmission-lines/data
 filesin = {
     'Transmission': os.path.join(
-        projpath,'in','Maps','HIFLD',
-        'Electric_Power_Transmission_Lines','Electric_Power_Transmission_Lines.shp'),
+        projpath,'in','Maps','HIFLD','Electric_Power_Transmission_Lines-shp'),
 }
-dftrans = gpd.read_file(filesin['Transmission'])
+dftrans = gpd.read_file(filesin['Transmission']).to_crs({'init':'epsg:4326'})
 
 dftransvolt = dftrans.loc[dftrans.VOLTAGE>0].reset_index(drop=True).copy()
 
@@ -191,10 +190,7 @@ dftranshv = dftransvolt.loc[dftransvolt.VOLTAGE>=voltcutoff].reset_index(drop=Tr
 ### Load urban shapefile
 ### First download from https://www2.census.gov/geo/tiger/TIGER2019/UAC/
 dfurban_all = gpd.read_file(
-    os.path.join(
-        projpath,'in','Maps','Census','urbanarea',
-        'tl_2010_us_uac10','tl_2010_us_uac10.shp')
-)
+    os.path.join(projpath,'in','Maps','Census','tl_2010_us_uac10'))
 
 ### Create a list of endpoints of transmission segments
 transends = []
@@ -252,7 +248,9 @@ os.makedirs(outpath[resource], exist_ok=True)
 
 ### Skip if it's done
 if os.path.exists(os.path.join(outpath[resource],outfile[resource])) and (overwrite == False):
-    continue
+    print('{} exists and overwrite == False, so quitting.'.format(
+        os.path.join(outpath[resource],outfile[resource])))
+    quit()
 
 ###### Load site dataframes
 if resource == 'pv':

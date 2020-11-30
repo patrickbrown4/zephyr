@@ -156,8 +156,7 @@ dfoutside = gpd.GeoDataFrame(geometry=[outside])
 
 ###### Urban areas
 ### Load urban shapefile
-dfurban_all = gpd.read_file(os.path.join(
-    datapath,'Maps','Census','urbanarea','tl_2010_us_uac10','tl_2010_us_uac10.shp'))
+dfurban_all = gpd.read_file(os.path.join(datapath,'Maps','Census','tl_2010_us_uac10'))
 
 dfurban_states = dfurban_all.loc[
     dfurban_all.NAME10.astype(str).map(lambda x: x[-2:] in zonestates)
