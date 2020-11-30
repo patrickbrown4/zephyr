@@ -8,7 +8,7 @@ datapath = os.path.join(projpath, 'in', '')
 
 ### extdatapath is where resource data is stored; can be an external drive or 
 ### same as datapath
-# extdatapath = os.path.expanduser('~/../../Volumes/EXAMPLE/Data/')
+# extdatapath = os.path.expanduser('~/../../Volumes/EXAMPLE/zephyr/in/')
 extdatapath = datapath
 
 apikeys = {

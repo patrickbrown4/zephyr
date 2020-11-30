@@ -360,14 +360,14 @@ def getWINDnode_fromkey(isonode, key, year,
             [df.index.month, df.index.day, 
             df.index.hour, df.index.minute]).mean()
 
-        if yearhours(yearout) == 8760:
+        if zephyr.toolbox.yearhours(yearout) == 8760:
             dfout.drop((2,29), inplace=True)
         
         dfout.reset_index(drop=True, inplace=True)
         
         dfout.index = pd.date_range(
             '{}-01-01'.format(yearout), 
-            periods=yearhours(yearout) * 60 / resolution,
+            periods=zephyr.toolbox.yearhours(yearout) * 60 / resolution,
             freq='{}min'.format(resolution),
             tz=tz)
     elif year in ['full', None]:
@@ -604,7 +604,7 @@ def windsim_hsds_sites(
     """
     ###### Format inputs
     if windpath is None:
-        winddatapath = extdatapath + 'in/WTK-HSDS/every2-offset0/'
+        winddatapath = extdatapath + 'WTK-HSDS/every2-offset0/'
     else:
         winddatapath = windpath
 
@@ -700,7 +700,7 @@ def windsim_hsds_timeseries(
     if windpath is None:
         winddatapath = (
             extdatapath 
-            + 'in/WTK-HSDS/every2-offset0//timeseries/usa-halfdegbuff/')
+            + 'WTK-HSDS/every2-offset0//timeseries/usa-halfdegbuff/')
     else:
         winddatapath = windpath
 

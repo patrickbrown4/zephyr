@@ -12,7 +12,8 @@ dependencies:
   - xlrd>=1.2.0
   - requests>=2.24.0
   - pip:
-    - pvlib>=0.7.1
+    # - pvlib>=0.7.1
+    - pvlib==0.7.*
     - pulp==1.6.*
     - jenkspy>=0.1.5
     - geopy>=1.19.0

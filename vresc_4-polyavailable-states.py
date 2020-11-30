@@ -14,7 +14,6 @@ import zephyr
 
 projpath = zephyr.settings.projpath
 datapath = zephyr.settings.datapath
-extdatapath = zephyr.settings.extdatapath
 
 #######################
 ### ARGUMENT INPUTS ###

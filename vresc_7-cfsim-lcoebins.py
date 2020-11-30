@@ -191,7 +191,7 @@ if resource == 'pv':
     dcac = 1.3
 
     index_coords = 'psm3id'
-    resourcedatapath = os.path.join(extdatapath,'in','NSRDB','ico9')
+    resourcedatapath = os.path.join(extdatapath,'NSRDB','ico9','')
 
     # weightsfile = (
     #     projpath+'io/geo/developable-area/{}/nsrdb-icomesh9/'
@@ -233,7 +233,7 @@ elif resource == 'wind':
 
     index_coords = 'rowf_colf'
     resourcedatapath = os.path.join(
-        extdatapath,'in','WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
+        extdatapath,'WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
 
     weightsfile = {
         state: os.path.join(

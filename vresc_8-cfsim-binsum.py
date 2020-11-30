@@ -167,7 +167,7 @@ if resource == 'pv':
     dcac = 1.3
 
     index_coords = 'psm3id'
-    resourcedatapath = os.path.join(extdatapath,'in','NSRDB','ico9','')
+    resourcedatapath = os.path.join(extdatapath,'NSRDB','ico9','')
 
     filename_dfsites = outpath.replace('binned'+os.sep,'')+(
         'mean-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
@@ -187,7 +187,7 @@ elif resource == 'wind':
 
     index_coords = 'rowf_colf'
     resourcedatapath = os.path.join(
-        extdatapath,'in','WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
+        extdatapath,'WTK-HSDS','every2-offset0','timeseries','usa-halfdegbuff','')
 
     filename_dfsites = (
         outpath.replace('binned'+os.sep,'')
