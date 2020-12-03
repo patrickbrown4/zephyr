@@ -184,7 +184,7 @@ polynative = polynative.intersection(regionbox).buffer(0.)
 print('imported native')
 
 ###### National parks
-with open(os.path.join(projpath,'io','geo','nationalparks-all-poly.p'), 'rb') as p:
+with open(os.path.join(projpath,'in','Maps','NPS','nationalparks-all-poly.p'), 'rb') as p:
     polyparks = pickle.load(p)
 
 polyparks = polyparks.intersection(regionbox).buffer(0.)

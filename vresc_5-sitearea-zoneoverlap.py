@@ -59,9 +59,9 @@ else:
 ##############
 ### INPUTS ###
 
-inpath = os.path.join(projpath,'io','geo','developable-area','{}').format(zonesource)
+inpath = os.path.join(projpath,'io','geo','developable-area','{}','').format(zonesource)
 outpath = os.path.join(inpath,resource)
-polyfile = prefix+'{}.poly.p'.format(zone)
+polyfile = prefix+'{}_{}.poly.p'.format(zonesource, zone)
 
 savepoly = polyfile.replace('polyavailable','sitepoly').replace('.poly.p','.gdf.p')
 savearea = polyfile.replace('polyavailable','sitearea').replace('.poly.p','.csv')
@@ -79,7 +79,7 @@ if not any([returnarea, returnfull]):
 os.makedirs(outpath, exist_ok=True)
 
 ###### Load the available polygon
-with open(inpath+polyfile, 'rb') as p:
+with open(os.path.join(inpath,polyfile), 'rb') as p:
     polyavailable_region = pickle.load(p)
 
 if resource == 'wtk-hsds-every2':
@@ -88,7 +88,7 @@ if resource == 'wtk-hsds-every2':
     ### Get WTK coordinates
     ### Load all HSDS points
     dfcoords = pd.read_csv(
-        os.path.join(projpath,'io','wind','hsdscoords.gz')
+        os.path.join(projpath,'io','geo','hsdscoords.gz')
     ).rename(columns={'row':'row_full','col':'col_full'})
     ### Index by original row,column
     dfcoords[index_coords] = dfcoords.row_full.astype(str)+'_'+dfcoords.col_full.astype(str)
