@@ -23,7 +23,6 @@
         * `-o test` indicates both the folder in which to store the outputs (`out/test`) and the cases file from which to read the input settings (`cases-test.xlsx`).
         * `-s clp` indicates that the COIN-LP solver should be used. `-s gurobi` also works if you have gurobi installed with a working license.
 ### Renewable-energy supply curves
-* **VRE supply curve functionality has not yet been fully tested in this environment.**
 * `vresc_0-prepare-shapefiles.py`
     * Downloads some input data (primarily shapefile maps) from public sources and creates the US states zone map.
 * `vresc_1-icomesh.py`
@@ -54,7 +53,7 @@ Sources
 -------
 * Land exclusions
     * Mountains
-        * The original data source for mountains is the USGS Global Mountain Explorer dataset (<https://rmgsc.cr.usgs.gov/gme/>). We use the "High Mountains" and "Scattered High Mountains" fileds from the K3 datafile at <https://rmgsc.cr.usgs.gov/outgoing/ecosystems/Global/GlobalMountainsK3Classes.zip>. These data are in raster format, so we use the `gdal_polygonize.py` script (<https://gdal.org/programs/gdal_polygonize.html>) from the GDAL library (<https://github.com/OSGeo/gdal>) to convert to polygons and truncated to US mountain ranges. These steps are not included in this repository; instead we provide the intermediate pickled `shapely.polygon` objects `usgsgmek3_high_-170,-30lon_5,70lat.polygon.polygon.p` and `usgsgmek3_highscattered_-170,-30lon_5,70lat.polygon.p`.
+        * The original data source for mountains is the USGS Global Mountain Explorer dataset (<https://rmgsc.cr.usgs.gov/gme/>). We use the "High Mountains" and "Scattered High Mountains" fileds from the K3 datafile at <https://rmgsc.cr.usgs.gov/outgoing/ecosystems/Global/GlobalMountainsK3Classes.zip>. These data are in raster format, so we use the `gdal_polygonize.py` script (<https://gdal.org/programs/gdal_polygonize.html>) from the GDAL library (<https://github.com/OSGeo/gdal>) to convert to polygons and truncate to US mountain ranges. These steps are not included in this repository; instead we provide the intermediate pickled `shapely.polygon` objects `usgsgmek3_high_-170,-30lon_5,70lat.polygon.p` and `usgsgmek3_highscattered_-170,-30lon_5,70lat.polygon.p`.
         <!-- `io/geo/mountains/usgsgmek3_high` and `io/geo/mountains/usgsgmek3_highscattered` shapefiles. -->
 
 * PV modeling

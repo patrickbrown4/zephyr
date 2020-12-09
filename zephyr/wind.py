@@ -168,8 +168,8 @@ def getpowercurve(source='wtk', model=None, normalize=True):
     """
     """
     sources = {'database':'twp'}
-    file = projpath+'Wind/in/powercurves/dfpc_{}_clean.p'.format(
-        sources.get(source,source))
+    file = os.path.join(
+        projpath,'io','wind','dfpc_{}_clean.p'.format(sources.get(source,source)))
     
     # with open(file, 'rb') as p:
     #     df = pickle.load(p)
@@ -717,7 +717,7 @@ def windsim_hsds_timeseries(
     for rowf_colf in iterator:
         dfwind = pd.read_pickle(
             winddatapath+'{}.df.p.gz'.format(rowf_colf)).copy()
-        ### 20200923 - need to explicitly set the freq with pandas 1.1.0
+        ### Need to explicitly set the freq with pandas>1.1.0
         dfwind.index.freq = 'H'
         ### Interpolate to 140m if height is 140
         if height == 140:

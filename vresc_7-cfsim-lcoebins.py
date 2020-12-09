@@ -355,7 +355,7 @@ elif resource == 'wind':
     ###### Load points to model
     ### Load HSDS points
     dfcoords = pd.read_csv(
-        os.path.join(projpath,'Wind','io','hsds','hsdscoords.gz')
+        os.path.join(projpath,'io','geo','hsdscoords.gz')
     ).rename(columns={'row':'row_full','col':'col_full'})
     ### Make the lookup index
     dfcoords['rowf_colf'] = (

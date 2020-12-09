@@ -44,8 +44,8 @@ parser.add_argument(
     '-e', '--height', default=100, type=int,
     help="wind turbine height in meters, default 100",)
 parser.add_argument(
-    '-m', '--model', default='Gamesa:G126/2500', type=str,
-    help="wind turbine model, default 'Gamesa:G126/2500'",)
+    '-m', '--model', default='Gamesa:G126/2500_low', type=str,
+    help="wind turbine model, default 'Gamesa:G126/2500_low'",)
 parser.add_argument(
     '-u', '--urban', default='edge', type=str, choices=['edge','centroid'],
     help="Urban endpoint: edge (any urban area) or centroid (all urban areas)")
@@ -218,7 +218,7 @@ os.makedirs(outpath, exist_ok=True)
 savename_bins_lcoe = outpath + (
     os.path.basename(filename_dfsites)
     .replace('mean-','cf-')
-    .replace('.csv','-NUMBREAKScfbins.csv'))
+    .replace('.csv','-NUMBREAKSlcoebins.csv'))
 if os.path.exists(savename_bins_lcoe):
     quit()
 print(savename_bins_lcoe)
@@ -237,7 +237,7 @@ for numbreaks in range(1,maxbreaks+1):
     areafile = (
         savename_bins_lcoe
         .replace(os.path.join('binned','cf-'),os.path.join('binned','area-'))
-        .replace('NUMBREAKScfbins.csv'.format(maxbreaks), '{}cfbins.csv'.format(numbreaks))
+        .replace('NUMBREAKSlcoebins.csv'.format(maxbreaks), '{}lcoebins.csv'.format(numbreaks))
     )
     dictarea[numbreaks] = pd.read_csv(areafile, index_col='bin_lcoe', squeeze=True).to_dict()
 
@@ -261,6 +261,8 @@ for i in tqdm(dfsites.index, desc=str(zone)):
     rowf_colf = dfsites.loc[i,'rowf_colf']
     dfwind = pd.read_pickle(
         resourcedatapath+'{}.df.p.gz'.format(rowf_colf)).copy()
+    ### Need to explicitly set the freq with pandas>1.1.0
+    dfwind.index.freq = 'H'
     ### Interpolate to 140m if height is 140
     if height == 140:
         dfwind['pressure_140m'] = (

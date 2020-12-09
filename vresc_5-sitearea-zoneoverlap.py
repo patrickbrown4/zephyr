@@ -20,15 +20,15 @@ import argparse
 parser = argparse.ArgumentParser(description='voronoi-poly overlap')
 
 parser.add_argument(
-    'zone', help='zone name (e.g. may start with eGRID_)', type=str)
+    'zone', help='zone name (such as state abbreviation)', type=str)
 parser.add_argument(
     '-x', '--zonesource', type=str, default='state', help='region type')
 parser.add_argument(
     '-a', '--prefix', help='filename before zone', type=str,
     default='polyavailable-water,parks,native,mountains,urban-')
 parser.add_argument(
-    '-b', '--polybuffer',
-    default=0.5, type=float)
+    '-b', '--polybuffer', default=0.5, type=float,
+    help='degree buffer; use 0.5 for wind and 2.0 for PV')
 parser.add_argument(
     '-r', '--resource', help="'wtk' or 'icomesh9' or 'merra2'",
     type=str)
