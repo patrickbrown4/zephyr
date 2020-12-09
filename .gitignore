@@ -21,6 +21,9 @@ results/
 # inputs folders
 in/
 
+# office temp files
+~$*
+
 # individual large files which are created by included scripts
 io/geo/usa-points*
 io/geo/world-points*

@@ -85,12 +85,15 @@ os.makedirs(os.path.join(outpath), exist_ok=True)
 batchfile = 'cases-{}.xlsx'.format(batchname)
 cases = pd.read_excel(
     batchfile, index_col='case', sheet_name='runs',
-    dtype={'include_hydro_res':bool, 'include_hydro_ror':bool,
-           'include_gas':bool, 'gasprice':str,
-           'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
-           'include_phs':int, 'build_phs':str, 
-           'include_nuclear':int, 'build_nuclear':str,
-           'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,}
+    dtype={
+        'include_hydro_res':bool, 'include_hydro_ror':bool,
+        'include_gas':bool, 'gasprice':str,
+        'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
+        'include_phs':int, 'build_phs':str, 
+        'include_nuclear':int, 'build_nuclear':str,
+        'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,
+        'pvscale':float, 'windscale':float, 'storscale':float, 'transscale':float,
+    }
 )
 dfstate = pd.read_excel(
     batchfile, sheet_name='state', index_col=0, header=[0,1],
@@ -195,6 +198,8 @@ for case in runcases:
         return '-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}-{}lcoebins.csv'.format(
             systemtype, axis_tilt, axis_azimuth, dcac, pvcost_bins, unitlevel, zone, bins)
     scaler_pv = cases.loc[case,'scaler_pv'] ### GW per km^2
+    ### Scale the PV cost by pvscale
+    pvscale = cases.loc[case,'pvscale']
 
     ### Wind assumptions
     model = cases.loc[case,'wind_model']
@@ -210,9 +215,13 @@ for case in runcases:
     ).format(interconnection_scaler, unitlevel, modelsave)
     scaler_wind = cases.loc[case,'scaler_wind'] ### GW per km^2
     vom_wind = cases.loc[case,'vom_wind']
+    ### Scale the wind cost by windscale
+    windscale = cases.loc[case,'windscale']
     
     ### Storage assumptions
     vom_stor = cases.loc[case,'vom_stor']
+    ### Scale the storage cost by storscale
+    storscale = cases.loc[case,'storscale']
 
     ### Hydro assumptions
     include_hydro_res = cases.loc[case,'include_hydro_res']
@@ -237,6 +246,8 @@ for case in runcases:
     except ValueError:
         build_dc = bool(int(build_dc.split('*')[0]))
         cost_scaler_dc = float(cases.loc[case,'build_dc'].split('*')[1])
+    ### Scale the transmission cost by transscale
+    transscale = cases.loc[case,'transscale']
     
     try:
         transcost_adder = pd.read_csv(
@@ -773,7 +784,7 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_ac
+                line.cost_annual = line.cost_annual * cost_scaler_ac * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
@@ -794,7 +805,7 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_dc
+                line.cost_annual = line.cost_annual * cost_scaler_dc * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
@@ -822,10 +833,10 @@ for case in runcases:
         ### Add storage
         annualcost_E = zephyr.cpm.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_E
+            lifetime=life_stor,).cost_annual_E * storscale
         annualcost_P = zephyr.cpm.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_stor,).cost_annual_P
+            lifetime=life_stor,).cost_annual_P * storscale
         for node in nodes:
             ### Apply regional cost scaler, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -890,7 +901,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'pv'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * pvscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -908,9 +919,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + pv_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * cost_scaler_ac * transscale
                                 if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * cost_scaler_ac * transscale)
                         )
                     )
                     .add_capacity_bound_hi(pv_gwcap[node][jbin])
@@ -922,7 +933,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'wind'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * windscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -940,9 +951,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + wind_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * cost_scaler_ac * transscale
                                if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * cost_scaler_ac * transscale)
                         )
                     )
                     .add_capacity_bound_hi(wind_gwcap[node][jbin])
