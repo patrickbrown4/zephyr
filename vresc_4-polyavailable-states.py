@@ -214,13 +214,13 @@ print('imported water')
 mountaintypes = ['high','highscattered']
 mountains = {}
 for mountain in mountaintypes:
-    with open(os.path.join(
-            '{}','io','geo','mountains','usgsgmek3_{}_-170,-30lon_5,70lat.polygon.p'
-            ).format(projpath, mountain),'rb') as p:
-        poly = pickle.load(p)
+    gdf = gpd.read_file(os.path.join(
+        projpath,'io','geo','mountains','usgsgmek3_{}_-170,-30lon_5,70lat'.format(mountain)
+    ))
+    poly = gdf.loc[0,'geometry']
         
-        ### Merge with bounding box
-        mountains[mountain] = poly.buffer(0.).intersection(regionbox)
+    ### Merge with bounding box
+    mountains[mountain] = poly.buffer(0.).intersection(regionbox)
 
 polymountains = mountains[mountaintypes[0]]
 for i in range(1,len(mountaintypes)):

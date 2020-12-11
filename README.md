@@ -58,8 +58,7 @@
     * [1] Brown, P.R.; Botterud, A. "The value of inter-regional coordination and transmission in decarbonizing the US electricity system." Joule 2020, 5, 1–20. <https://doi.org/10.1016/j.joule.2020.11.013>
 * Land exclusions
     * Mountains
-        * The original data source for mountains is the USGS Global Mountain Explorer dataset (<https://rmgsc.cr.usgs.gov/gme/>). We use the "High Mountains" and "Scattered High Mountains" fileds from the K3 datafile at <https://rmgsc.cr.usgs.gov/outgoing/ecosystems/Global/GlobalMountainsK3Classes.zip>. These data are in raster format, so we use the `gdal_polygonize.py` script (<https://gdal.org/programs/gdal_polygonize.html>) from the GDAL library (<https://github.com/OSGeo/gdal>) to convert to polygons and truncate to US mountain ranges. These steps are not included in this repository; instead we provide the intermediate pickled `shapely.polygon` objects `usgsgmek3_high_-170,-30lon_5,70lat.polygon.p` and `usgsgmek3_highscattered_-170,-30lon_5,70lat.polygon.p`.
-        <!-- `io/geo/mountains/usgsgmek3_high` and `io/geo/mountains/usgsgmek3_highscattered` shapefiles. -->
+        * The original data source for mountains is the USGS Global Mountain Explorer dataset (<https://rmgsc.cr.usgs.gov/gme/>). We use the "High Mountains" and "Scattered High Mountains" fileds from the K3 datafile at <https://rmgsc.cr.usgs.gov/outgoing/ecosystems/Global/GlobalMountainsK3Classes.zip>. These data are in raster format, so we use the `gdal_polygonize.py` script (<https://gdal.org/programs/gdal_polygonize.html>) from the GDAL library (<https://github.com/OSGeo/gdal>) to convert to polygons and truncate to US mountain ranges. These steps are not included in this repository; instead we provide the intermediate `io/geo/mountains/usgsgmek3_high_-170,-30lon_5,70lat` and `io/geo/mountains/usgsgmek3_highscattered_-170,-30lon_5,70lat` shapefiles.
 * PV modeling
     * Additional documentation on PV modeling is provided in the following papers and repositories. Some of the code in this repository is copied from the Zenodo repositories linked below.
         * [2] Brown, P.R.; O'Sullivan, F. "Shaping photovoltaic array output to align with changing wholesale electricity price profiles." Applied Energy 2019, 256, 113734. <https://doi.org/10.1016/j.apenergy.2019.113734>, <https://zenodo.org/record/3368397>
@@ -70,3 +69,6 @@
     * Existing nuclear capacity (`io/nuclear/*`)
     * Wind turbine power curves (`io/wind/*`)
     * Inter-state and -PA urban centroid distances (`io/transmission/{}-distance-urbancentroid-km.csv`)
+
+## Additional notes
+* More recent versions of python packages than are specified in `environment.yml` may lead to faster run times, but are not fully tested. geopandas 0.8.1 vs 0.6.1 appears to be one such example. Feel free to try more recent versions, but note that doing so may lead to inconsistent behavior elsewhere.
