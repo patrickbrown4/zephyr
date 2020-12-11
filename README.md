@@ -23,7 +23,7 @@
         * `23` indicates the case to use from the cases file (in this case, running for the full US at PA resolution over 2007–2013 with new transmission allowed).
         * `-o test` indicates both the folder in which to store the outputs (`out/test`) and the cases file from which to read the input settings (`cases-test.xlsx`).
         * `-s clp` indicates that the COIN-LP solver should be used. `-s gurobi` also works if you have gurobi installed with a working license.
-    * Alternative `cases-{}.xlsx` files are also included to reproduce the results from the paper 20
+    * Alternative `cases-{}.xlsx` files are also included to reproduce the results from reference [1] below.
 ### Renewable-energy supply curves
 * `vresc_0-prepare-shapefiles.py`
     * Downloads some input data (primarily shapefile maps) from public sources and creates the US states zone map.
@@ -72,3 +72,5 @@
 
 ## Additional notes
 * More recent versions of python packages than are specified in `environment.yml` may lead to faster run times, but are not fully tested. geopandas 0.8.1 vs 0.6.1 appears to be one such example. Feel free to try more recent versions, but note that doing so may lead to inconsistent behavior elsewhere.
+* This repository was developed and tested on macintosh and linux machines. While efforts have been made to support platform independence, there may be issues on windows machines.
+* The abbreviations 'BA' (balancing area) and 'PA' (planning area) are used interchangeably in many scripts; in all cases they refer to the planning areas in reference [1].
