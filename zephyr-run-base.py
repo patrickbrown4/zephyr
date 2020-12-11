@@ -232,6 +232,10 @@ for case in runcases:
     existing_trans = cases.loc[case,'existing_trans']
     build_ac = cases.loc[case,'build_ac']
     try:
+        vom_trans = cases.loc[case,'vom_trans']
+    except KeyError:
+        vom_trans = 0
+    try:
         build_ac_voltage = int(cases.loc[case,'build_ac_voltage'])
         cost_scaler_ac = 1
     except ValueError:
@@ -745,6 +749,7 @@ for case in runcases:
                         newbuild=False,
                         ### (voltage doesn't matter since they all have the same losses)
                         voltage=345, 
+                        cost_vom=vom_trans,
                     )
                 )
             ### DC
@@ -760,6 +765,7 @@ for case in runcases:
                         newbuild=False, 
                         ### (need to specify the voltage because DC has lower losses)
                         voltage='DC',
+                        cost_vom=vom_trans,
                     )
                 )
             ##### New lines
@@ -776,6 +782,7 @@ for case in runcases:
                     defaults=defaults, name=name,
                     wacc=wacc_trans,
                     newbuild=True,
+                    cost_vom=vom_trans,
                 )
                 ### Adjust cost_annual by the input multiplier
                 line.cost_annual = line.cost_annual * cost_scaler_ac * transscale
@@ -797,6 +804,7 @@ for case in runcases:
                     defaults=defaults, name=name,
                     wacc=wacc_trans,
                     newbuild=True,
+                    cost_vom=vom_trans,
                 )
                 ### Adjust cost_annual by the input multiplier
                 line.cost_annual = line.cost_annual * cost_scaler_dc * transscale

@@ -1,3 +1,6 @@
+### Note that the MERRA scripts are not as well-validated as the rest of the scripts
+### in this repository; updates may be posted to 
+### https://github.com/patrickbrown4/zephyr
 import os, sys, urllib, requests, time
 import pandas as pd
 from tqdm import tqdm, trange

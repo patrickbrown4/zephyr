@@ -185,15 +185,19 @@ for case in runcases:
     life_gen = cases.loc[case,'life_gen']
     if np.isnan(life_gen):
         life_gen = None
+    life_stor = cases.loc[case,'life_stor']
+    if np.isnan(life_stor):
+        life_stor = None
     interconnection_scaler = cases.loc[case,'interconnection_scaler']
     region_scaler_file = cases.loc[case,'region_scaler']
 
     ###### Distance parameters
-    distancepath = regeopath+'io/cf-1998_2018/'
+    distancepath = os.path.join(
+        projpath,'io','cf-1998_2018','')
 
     ### PV assumptions
-    pvpath = regeopath+(
-        'io/cf-1998_2018/{}/pv/{}-{}t-{:.0f}az/binned/'
+    pvpath = os.path.join(
+        projpath,'io','cf-1998_2018','{}','pv','{}-{}t-{:.0f}az','binned',''
     ).format(unitlevel, systemtype, axis_tilt, axis_azimuth)
     def pvfile(zone,bins): 
         return '-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-track_2030_mid-{}_{}-{}lcoebins.csv'.format(
@@ -209,13 +213,18 @@ for case in runcases:
         return ('-merra2-{}-{}m-'
                 '{:.0f}pctloss-2030_mid-{}_{}-{}lcoebins.csv').format(
             modelsave, height, loss_system_wind*100, unitlevel, zone, bins)
-    windpath = regeopath+(
-        'io/cf-1998_2018/{}/merra2/{}/binned/'
+    windpath = os.path.join(
+        projpath,'io','cf-1998_2018','{}','merra2','{}','binned',''
     ).format(unitlevel, modelsave)
     scaler_wind = cases.loc[case,'scaler_wind'] ### GW per km^2
     vom_wind = cases.loc[case,'vom_wind']
+    ### Scale the wind cost by windscale
+    windscale = cases.loc[case,'windscale']
+
     ### Storage assumptions
     vom_stor = cases.loc[case,'vom_stor']
+    ### Scale the storage cost by storscale
+    storscale = cases.loc[case,'storscale']
 
     ### Hydro assumptions
     include_hydro_res = cases.loc[case,'include_hydro_res']
@@ -240,10 +249,12 @@ for case in runcases:
     except ValueError:
         build_dc = bool(int(build_dc.split('*')[0]))
         cost_scaler_dc = float(cases.loc[case,'build_dc'].split('*')[1])
+    ### Scale the transmission cost by transscale
+    transscale = cases.loc[case,'transscale']
 
     try:
         transcost_adder = pd.read_csv(
-            regeopath+'io/transmission/transmission-adder-{}.csv'.format(
+            os.path.join(projpath,'io','transmission','transmission-adder-{}.csv').format(
                 cases.loc[case,'intralevel_transcost']),
             index_col=0)['transcost_adder_MUSD_per_GW_yr'].to_dict()
     except FileNotFoundError:
@@ -254,7 +265,7 @@ for case in runcases:
 
     try:
         region_scaler = pd.read_csv(
-            regeopath+'io/cost/{}.csv'.format(region_scaler_file),
+            os.path.join(projpath,'io','cost','{}.csv'.format(region_scaler_file)),
             index_col=0)
     except FileNotFoundError:
         print('No regional cost scaler: {}'.format(region_scaler_file))
@@ -280,16 +291,18 @@ for case in runcases:
     ###### Inputs for inter-zone transmission
     ### Connectivity matrix
     dftransin = pd.read_csv(
-        regeopath+'io/transmission/reeds-transmission-GW-{}.csv'.format(unitlevel),
+        os.path.join(
+            projpath,'io','transmission','reeds-transmission-GW-{}.csv').format(unitlevel),
         index_col=[0,1])
     ### Distance matrix
     dfdistance = pd.read_csv(
-        regeopath+'io/transmission/{}-distance-urbancentroid-km.csv'.format(unitlevel),
+        os.path.join(
+            projpath,'io','transmission','{}-distance-urbancentroid-km.csv').format(unitlevel),
         index_col=0)
 
     ### Get level/unitlevel dataframe
     dfregion = pd.read_excel(
-        outpath+'cases.xlsx', sheet_name=unitlevel,
+        batchfile, sheet_name=unitlevel,
         index_col=0, header=[0,1], 
         dtype={
             ('numbins_pv',unitlevel): int, ('numbins_wind',unitlevel): int,
@@ -312,7 +325,7 @@ for case in runcases:
     else:
         region_generator = regions
     for region in region_generator:
-        savename = outpath+'results/{}-{}.p.gz'.format(case, region)
+        savename = outpath+'{}-{}{}.p.gz'.format(case, region, savemod)
         if verbose >= 1:
             print(savename)
             sys.stdout.flush()
@@ -390,8 +403,9 @@ for case in runcases:
         ### Site CF info
         pv_sites = {
             node: pd.read_csv(
-                (distancepath+'{}/pv/{}-{}t-{:.0f}az/mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-'
-                 +'{:.2f}dcac-track_2030_mid-{}_{}.csv'
+                os.path.join(
+                    distancepath,'{}','pv','{}-{}t-{:.0f}az',
+                    'mean-nsrdb,icomesh9-{}-{}t-{:.0f}az-{:.2f}dcac-track_2030_mid-{}_{}.csv'
                 ).format(unitlevel, systemtype, axis_tilt, axis_azimuth, 
                          systemtype, axis_tilt, axis_azimuth, dcac, 
                          unitlevel, node))
@@ -399,8 +413,9 @@ for case in runcases:
         }
         wind_sites = {
             node: pd.read_csv(
-                (distancepath+'{}/merra2/{}/mean-merra2-'
-                 +'{}-{}m-{:.0f}pctloss-2030_mid-{}_{}.csv'
+                os.path.join(
+                    distancepath,'{}','merra2','{}',
+                    'mean-merra2-{}-{}m-{:.0f}pctloss-2030_mid-{}_{}.csv'
                 ).format(unitlevel, modelsave, modelsave, height, 
                          loss_system_wind*100, unitlevel, node))
             for node in nodes
@@ -531,10 +546,6 @@ for case in runcases:
             {**{'load': pd.concat({'load':dfload},axis=1), 
                 'pv': dfpvall, 
                 'wind': dfwindall},
-             # **({'reshydro': pd.concat({'res':dfhydrores},axis=1).tz_localize(tz)} 
-             #    if hasres else {}),
-             # **({'rorhydro': pd.concat({'ror':dfhydroror},axis=1).fillna(0.)} 
-             #    if hasror else {}),
             },
             axis=1
         ).tz_convert(tz).loc[slice(str(vreyears[0]),str(vreyears[-1]))]#.fillna(0.)
@@ -779,9 +790,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + pv_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * cost_scaler_ac * transscale
                                 if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * cost_scaler_ac * transscale)
                         )
                     )
                     .add_capacity_bound_hi(pv_gwcap[node][jbin])
@@ -793,7 +804,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'wind'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * windscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -811,9 +822,9 @@ for case in runcases:
                             ### Add the interconnection cost for the bin
                             + wind_trans_cost[node,jbin]
                             ### Add the intralevel transmission cost
-                            + (transcost_adder[node] * cost_scaler_ac
+                            + (transcost_adder[node] * cost_scaler_ac * transscale
                                if type(transcost_adder) is dict
-                               else transcost_adder * cost_scaler_ac)
+                               else transcost_adder * cost_scaler_ac * transscale)
                         )
                     )
                     .add_capacity_bound_hi(wind_gwcap[node][jbin])
@@ -846,36 +857,6 @@ for case in runcases:
         if (reserve_margin not in [None,np.nan]):
             system.set_reserves(reserve_margin)
 
-        # ###### Make the Reservoir hydro and add its availability
-        # if include_hydro_res == True: 
-        #     for node in nodes:
-        #         if hasreses[node]:
-        #             hydrores = (
-        #                 zephyr.cpm.HydroRes(
-        #                     'Hydro_Res', defaults=defaults,
-        #                     newbuild=False, balancelength='day',
-        #                     cost_vom=vom_res,
-        #                 )
-        #                 .add_capacity_bound_hi(rescap[node])
-        #                 .add_availability(dfrun.reshydro.res[node].iloc[::24], period=0)
-        #                 .localize(node)
-        #             )
-        #             system.add_reshydro('Hydro_Res_{}'.format(node), hydrores)
-
-        # ###### Make the ROR hydro and add its availability
-        # if include_hydro_ror == True:
-        #     for node in nodes:
-        #         if hasrors[node]:
-        #             hydroror = (
-        #                 zephyr.cpm.Gen(
-        #                     'Hydro_ROR', defaults=defaults, cost_capex=0,)
-        #                 ### TODO: Should we include lower bound or let it be retired?
-        #                 .add_capacity_bound_lo(dictrormax[node]) 
-        #                 .add_capacity_bound_hi(dictrormax[node])
-        #                 .add_availability(dfrun.rorhydro.ror[node], period=0)
-        #                 .localize(node)
-        #             )
-        #             system.add_generator('Hydro_ROR_{}'.format(node), hydroror)
 
         ### Solve it
         _ = zephyr.cpm.model(
