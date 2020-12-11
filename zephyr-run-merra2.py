@@ -1,5 +1,5 @@
 ###############
-### IMPORTS ###
+#%% IMPORTS ###
 
 import pandas as pd
 import numpy as np
@@ -10,16 +10,16 @@ from tqdm import tqdm, trange
 import zephyr
 
 ### Common paths
-projpath = os.path.expanduser('~/Dropbox/MITEI/Projects/REGeo/package/REVIEW_Joule/')
+projpath = zephyr.settings.projpath
 
 #######################
-### ARGUMENT INPUTS ###
+#%% ARGUMENT INPUTS ###
 
 import argparse
-parser = argparse.ArgumentParser(description='run capaxl for series of cases')
+parser = argparse.ArgumentParser(description='run zephyr for series of cases')
 
 parser.add_argument(
-    'case', type=str,
+    'case', type=str, default='0',
     help='integer name of case; can be single integer or comma-delimited',)
 parser.add_argument(
     '-r', '--region', default='all', help='region or "all"')
@@ -27,13 +27,19 @@ parser.add_argument(
     '-o', '--batchname', default='test', 
     help='case file name: "cases-{batchname}.xlsx"')
 parser.add_argument(
-    '-v', '--verbose', action='count', default=0)
-parser.add_argument(
-    '-z', '--overwrite', action='store_true')
-parser.add_argument(
     '-m', '--method', type=int, default=-1, 
     help=('gurobi method: -1 default, 0 primal simplex, 1 dual simplex, 2 barrier, '
-          '3 concurrent, 4 deterministic concurrent, 5 deterministic concurrenr simplex',))
+          '3 concurrent, 4 deterministic concurrent, 5 deterministic concurrent simplex',))
+parser.add_argument(
+    '-t', '--truncmid', type=float, default=0.0005, help='midpoint for vre truncation')
+parser.add_argument(
+    '-y', '--savemod', type=str, default='', help='append to end of savename')
+parser.add_argument(
+    '-s', '--solver', type=str, default='gurobi', choices=['gurobi','clp','cbc','gurobipy'])
+parser.add_argument('-v', '--verbose', action='count', default=0)
+parser.add_argument('-z', '--overwrite', action='store_true')
+parser.add_argument('-a', '--includedual', action='store_true')
+parser.add_argument('-b', '--includereserves', action='store_true')
 
 ### Parse it
 args = parser.parse_args()
@@ -44,33 +50,57 @@ runregions = args.region.split(',')
 verbose = args.verbose
 overwrite = args.overwrite
 method = args.method
-# if runregions in ['all','USA','usa',None]:
+truncmid = args.truncmid
+savemod = args.savemod
+if len(savemod) > 0:
+    savemod = '-{}'.format(savemod)
+solver = args.solver
+includedual = args.includedual
+includereserves = args.includereserves
+
+####################
+#%% DEBUG INPUTS ###
+
+# case = 0
+# runcases = [0]
+# region = 'all'
+# runregions = ['all']
+# outpath = os.path.join(projpath,'out','test')+os.sep
+# method = -1
+# truncmid = 0
+# savemod = ''
+# solver = 'gurobi'
+# verbose = True
+# overwrite = False
+# includedual = False
+# includereserves = False
 
 ##############
-### INPUTS ###
+#%% INPUTS ###
 
-solver = 'gurobi'
-truncmid = 0.0005
-truncmax = 0.001
+truncmax = 2 * truncmid
 
 ### Cases to run
-os.makedirs(outpath+'results/', exist_ok=True)
+os.makedirs(os.path.join(outpath), exist_ok=True)
+batchfile = 'cases-{}.xlsx'.format(batchname)
 cases = pd.read_excel(
-    outpath+'cases.xlsx', index_col='case', sheet_name='runs',
-    dtype={'include_hydro_res':bool, 'include_hydro_ror':bool,
-           'include_gas':bool, 'gasprice':str,
-           'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
-           'include_phs':int, 'build_phs':str, 
-           'include_nuclear':int, 'build_nuclear':str,
-           'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,}
+    batchfile, index_col='case', sheet_name='runs',
+    dtype={
+        'include_hydro_res':bool, 'include_hydro_ror':bool,
+        'include_gas':bool, 'gasprice':str,
+        'existing_trans':bool, 'build_ac':bool, 'build_dc': str,
+        'include_phs':int, 'build_phs':str, 
+        'include_nuclear':int, 'build_nuclear':str,
+        'bins_pv':str, 'bins_wind':str, 'interconnection_scaler':int,
+        'pvscale':float, 'windscale':float, 'storscale':float, 'transscale':float,
+    }
 )
 dfstate = pd.read_excel(
-    outpath+'cases.xlsx', sheet_name='state',
-    index_col=0, header=[0,1],
+    batchfile, sheet_name='state', index_col=0, header=[0,1],
 )
 
 ### Economic and simulation assumptions
-infile = sdcpath+'io/capacityexpansion-linear/generator_fuel_assumptions-11.xlsx'
+infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
 defaults = zephyr.cpm.Defaults(infile)
 
 ### Distance parameters
@@ -107,9 +137,9 @@ timezones = {
 tzs = {region:zephyr.toolbox.timezone_to_tz(timezones[region]) for region in timezones}
 
 #################
-### PROCEDURE ###
+#%% PROCEDURE ###
 print(outpath)
-print(args.case)
+print(','.join([str(i) for i in runcases]))
 print(','.join(runregions))
 sys.stdout.flush()
 
@@ -496,130 +526,6 @@ for case in runcases:
             dictpvall[node] = df
         dfpvall = pd.concat(dictpvall, axis=1)
 
-
-        # ###### Hydro (reservoir)
-        # ### Get existing power capacity 
-        # hydrorescap = pd.read_csv(
-        #     regeopath+'io/hydro/hydro-CHcap-ORNL-GW-nonRORonly.csv', index_col=0, squeeze=True,
-        # ).to_dict()
-        # dfhydroresin = pd.read_csv(
-        #     regeopath+'io/hydro/hydro-MonthlyGenEIA923-2006_2017-GWh-nonRORonly.csv', 
-        #     parse_dates=True, index_col=0)
-        # # print('dfhydroresin\n', dfhydroresin.head()) ### DEBUG
-
-        # dicthydrores = {}
-        # hasreses = {}
-        # rescap = {}
-        # for node in nodes:
-        #     states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
-        #     # print('states', states) ### DEBUG
-        #     dicthydroresnode = {}
-        #     hasresesnode = {}
-        #     for state in states:
-        #         ### Get monthly generation, select state, filter to vreyears
-        #         dfhydroresnode = dfhydroresin.copy()
-        #         ### Check if state has hydro Res
-        #         if state in dfhydroresnode.columns:
-        #             hasres = True
-        #             # print('state in dfhydroresnode.columns') ### DEBUG
-        #             dfhydroresnode = dfhydroresnode[state].loc[
-        #                 slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
-        #             ].copy()
-
-        #             ### Convert to average daily generation in GWh
-        #             dfhydroresnode = dfhydroresnode / dfhydroresnode.index.map(
-        #                 lambda x: zephyr.toolbox.monthhours(x.year,x.month)/24)
-        #             ### Upsample to daily timeseries
-        #             dfhydroresnode = dfhydroresnode.resample('1D').ffill().loc[
-        #                 slice(str(vreyears[0]), str(vreyears[-1]))].copy()
-        #             ### Name it
-        #             dfhydroresnode = dfhydroresnode.rename('res')
-
-        #             ###### IMPORTANT: Clip hydro timeseries to <= power capacity
-        #             dfhydroresnode = dfhydroresnode.clip(upper=(hydrorescap[state]*24))
-
-        #             ### Store it
-        #             dicthydroresnode[state] = dfhydroresnode
-        #         else:
-        #             hasres = False
-        #         ### Store it
-        #         hasresesnode[state] = hasres
-
-        #     ### Aggregate the state hydros
-        #     hasres = any([hasresesnode[state] for state in states])
-        #     if hasres:
-        #         dfhydroresnode = pd.concat(dicthydroresnode,axis=1).sum(axis=1)
-        #         rescap[node] = 0
-        #         for state in states:
-        #             if hasresesnode[state]:
-        #                 rescap[node] += hydrorescap[state]
-        #         ### Store it if it has hydrores
-        #         dicthydrores[node] = dfhydroresnode
-        #     ### Record whether it has hydrores
-        #     hasreses[node] = hasres
-        # ### Record if there's any res in the node
-        # hasres = any([hasreses[node] for node in nodes])
-        # if hasres:
-        #     dfhydrores = pd.concat(dicthydrores, axis=1)
-        # else:
-        #     dfhydrores = None
-
-        # ###### Hydro (ROR)
-        # ### Get existing power capacity
-        # dfhydrororin = pd.read_csv(
-        #     regeopath+'io/hydro/hydro-MonthlyGenEIA923-2006_2017-GWh-RORonly.csv', 
-        #     parse_dates=True, index_col=0)
-        # dicthydroror = {}
-        # dictrormax = {}
-        # hasrors = {}
-        # for node in nodes:
-        #     states = dfstate.loc[dfstate['area'][unitlevel]==node].index.values
-        #     dicthydrorornode = {}
-        #     dictrormaxnode = {}
-        #     hasrorsnode = {}
-        #     for state in states:
-        #         df = dfhydrororin.copy()
-        #         ### Check if state has hydro ROR
-        #         if state in df.columns:
-        #             hasror = True
-        #             df = df[state].copy()
-        #             ### Convert to average hourly generation in GW
-        #             df = df / df.index.map(
-        #                 lambda x: zephyr.toolbox.monthhours(x.year,x.month))
-        #             ### Get max gen
-        #             rormax = float(df.max())
-        #             ### Subset to simulation year(s)
-        #             df = df.loc[
-        #                 slice('{}-01-01'.format(vreyears[0]), '{}-01-01'.format(vreyears[-1]+1))
-        #             ].rename('ror')
-        #             ### Upsample to hourly timeseries
-        #             df = df.tz_localize(tz).resample('1H').ffill().loc[
-        #                 slice(str(vreyears[0]), str(vreyears[-1]))].copy()
-
-        #             ### Store it
-        #             dicthydrorornode[state] = df
-        #             dictrormaxnode[state] = rormax
-        #         else:
-        #             hasror = False
-        #         ### Store it
-        #         hasrorsnode[state] = hasror
-
-        #     ### Aggregate the state RORs
-        #     dictrormax[node] = sum(dictrormaxnode.values())
-        #     hasrors[node] = any(hasrorsnode.values())
-        #     if hasrors[node]:
-        #         dicthydroror[node] = pd.concat(dicthydrorornode,axis=1).sum(axis=1)
-
-        # hasror = any(hasrors.values())
-        # if hasror:
-        #     dfhydroror = pd.concat(dicthydroror, axis=1)
-        #     ### Convert to CF
-        #     for col in dfhydroror.columns:
-        #         dfhydroror[col] = dfhydroror[col] / dictrormax[col]
-        # else:
-        #     dfhydroror = None
-
-
         ###### Merge it all
         dfrun = pd.concat(
             {**{'load': pd.concat({'load':dfload},axis=1), 
@@ -654,7 +560,7 @@ for case in runcases:
         ###### PHS
         if include_phs:
             phscap_state = pd.read_csv(
-                regeopath+'io/hydro/PHS-GW-EIA860_2018.csv', 
+                os.path.join(projpath,'io','hydro','PHS-GW-EIA860_2018.csv'), 
                 index_col=0, squeeze=True,
             ).to_dict()
             ### Aggregate by node
@@ -666,7 +572,7 @@ for case in runcases:
         ###### Nuclear
         if include_nuclear:
             nuclearcap_state = pd.read_csv(
-                regeopath+'io/nuclear/nuclear-GW-EIA860_2018-post{}.csv'.format(
+                os.path.join(projpath,'io','nuclear','nuclear-GW-EIA860_2018-post{}.csv').format(
                     include_nuclear), 
                 index_col=0, squeeze=True,
             ).to_dict()
@@ -738,7 +644,7 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_ac
+                line.cost_annual = line.cost_annual * cost_scaler_ac * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
@@ -759,7 +665,7 @@ for case in runcases:
                     newbuild=True,
                 )
                 ### Adjust cost_annual by the input multiplier
-                line.cost_annual = line.cost_annual * cost_scaler_dc
+                line.cost_annual = line.cost_annual * cost_scaler_dc * transscale
                 ### Make the line
                 system.add_line(name=name, line=line)
 
@@ -786,9 +692,11 @@ for case in runcases:
 
         ### Add storage
         annualcost_E = zephyr.cpm.Storage(
-            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,).cost_annual_E
+            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
+            lifetime=life_stor,).cost_annual_E * storscale
         annualcost_P = zephyr.cpm.Storage(
-            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,).cost_annual_P
+            cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
+            lifetime=life_stor,).cost_annual_P * storscale
         for node in nodes:
             ### Apply regional cost scaler, if applicable
             if type(region_scaler) == pd.DataFrame:
@@ -853,7 +761,7 @@ for case in runcases:
         ### Get the generator annual cost
         annualcost = zephyr.cpm.Gen(
             cases.loc[case,'pv'], defaults=defaults, wacc=wacc_gen,
-            lifetime=life_gen,).cost_annual
+            lifetime=life_gen,).cost_annual * pvscale
         for node in nodes:
             ### Apply the regional cost multiplier, if applicable
             if type(region_scaler) == pd.DataFrame:

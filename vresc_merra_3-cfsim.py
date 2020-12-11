@@ -24,7 +24,6 @@ years = list(range(1997,2020))
 model = 'Gamesa:G126/2500_low'
 pc_vmax = 60
 orders = 4
-loss_system = 0.15
 hystwindow = 5
 temp_cutoff = 243.15
 nans = 'raise'

@@ -184,7 +184,6 @@ for case in runcases:
         life_stor = None
     interconnection_scaler = cases.loc[case,'interconnection_scaler']
     region_scaler_file = cases.loc[case,'region_scaler']
-    load_scaler = 1
 
     ###### Distance parameters
     distancepath = os.path.join(
@@ -460,9 +459,6 @@ for case in runcases:
         else:
             dfload.index = dfload.index.map(
                 lambda t: t.replace(day=28) if ((t.month==2) and (t.day==29)) else t)
-        #######################
-        ### Add load scaler (20200305)
-        dfload = dfload * load_scaler
 
         ###### VRE series
         ### Wind
@@ -487,7 +483,6 @@ for case in runcases:
                 dictwindall[node].drop(dictwindall[node].loc['2008-02-29'].index)
                 .drop(dictwindall[node].loc['2012-02-29'].index))
             dictwindall[node] = dictwindall[node].tz_convert(tz)
-            ### NEW 20200308: truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
             if verbose >= 3:
                 print(node)
                 print(dictwindall[node].describe())
@@ -518,7 +513,6 @@ for case in runcases:
                 dictpvall[node].drop(dictpvall[node].loc['2008-02-29'].index)
                 .drop(dictpvall[node].loc['2012-02-29'].index))
             dictpvall[node] = dictpvall[node].tz_convert(tz)
-            ### NEW 20200308: truncate between 0-truncmid to 0; truncmid-truncmax to truncmax
             if verbose >= 3:
                 print(node)
                 print(dictpvall[node].describe())

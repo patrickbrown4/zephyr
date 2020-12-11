@@ -1,7 +1,3 @@
-"""
-* prbrown 20200323 13:00
-"""
-
 ###############
 ### IMPORTS ###
 import pandas as pd

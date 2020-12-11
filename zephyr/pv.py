@@ -293,7 +293,7 @@ class PVsystem:
                  n_ar=1.3, n_glass=1.526,
                  tempcoeff=-0.004, 
                  # temp_model='open_rack_cell_polymerback',
-                 temp_model='open_rack_glass_polymer', ### 20200126
+                 temp_model='open_rack_glass_polymer',
                  albedo=0.2, 
                  et_method='nrel', diffuse_model='reindl',
                  model_perez='allsitescomposite1990',
@@ -415,13 +415,11 @@ def loss_reflect(
         loss_reflect_abs(aoi, n_glass, n_ar, n_air, K, L)
         / loss_reflect_abs(0, n_glass, n_ar, n_air, K, L))
 
-    ####### UPDATED 20180712 ########
     if fillna==True:
         if isinstance(out, (pd.Series, pd.DataFrame)):
             out = out.fillna(0)
         elif isinstance(out, np.ndarray):
             out = np.nan_to_num(out)
-    #################################
 
     return out
 
@@ -434,7 +432,7 @@ def pv_system_sim(
     n_ar=1.3, n_glass=1.526, 
     tempcoeff=-0.004, 
     # temp_model='open_rack_cell_polymerback',
-    temp_model='open_rack_glass_polymer', ### 20200126
+    temp_model='open_rack_glass_polymer',
     albedo=0.2, diffuse_model='reindl', 
     et_method='nrel', model_perez='allsitescomposite1990', 
     nsrdbpathin='in/NSRDB/', nsrdbtype='.gz', 
@@ -559,22 +557,16 @@ def pv_system_sim(
     output_dc_loss_all = output_dc_loss_temp * (1 - loss_system)
 
     ### Correct for inverter
-    ##################################
-    ### Allow for DC output (20180821)
+    ### Allow for DC output
     if (dcac is None) and (loss_inverter is None):
         output_ac = output_dc_loss_all
     else:
-        ##############################
         output_ac = pvlib.pvsystem.pvwatts_ac(
             pdc=output_dc_loss_all*dcac,
-            ##### UPDATED 20180708 #####
-            # pdc0=1000,
             pdc0=1000/(1-loss_inverter),
-            ############################
-            # eta_inv_nom=eta_inverter,
             eta_inv_nom=(1-loss_inverter),
             eta_inv_ref=0.9637).fillna(0)
-        if clip is True:                     ### Added 20181126
+        if clip is True:
             output_ac = output_ac.clip(0)
 
     ### Return output
@@ -602,7 +594,7 @@ def pv_system_sim_fast(
     n_ar=1.3, n_glass=1.526, 
     tempcoeff=-0.004, 
     # temp_model='open_rack_cell_polymerback',
-    temp_model='open_rack_glass_polymer', ### 20200126
+    temp_model='open_rack_glass_polymer',
     albedo=0.2, diffuse_model='reindl', 
     et_method='nrel', model_perez='allsitescomposite1990',
     clip=True):
@@ -621,7 +613,6 @@ def pv_system_sim_fast(
             max_angle=max_angle, backtrack=backtrack, gcr=gcr)
         surface_tilt = tracker_data['surface_tilt']
         surface_azimuth = tracker_data['surface_azimuth']
-        ###### ADDED 20180712 ######
         surface_tilt = surface_tilt.fillna(axis_tilt).replace(0., axis_tilt)
         surface_azimuth = surface_azimuth.fillna(axis_azimuth)
 
@@ -652,7 +643,6 @@ def pv_system_sim_fast(
     # celltemp = pvlib.pvsystem.sapm_celltemp(
     #     poa_irrad['poa_global_reflectlosses'], dfsun['Wind Speed'], 
     #     dfsun['Temperature'], temp_model)['temp_cell']
-    ### UPDATED 20200126
     temp_model_params = (
         pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm'][temp_model])
     celltemp = pvlib.temperature.sapm_cell(
@@ -675,10 +665,7 @@ def pv_system_sim_fast(
     ### Correct for inverter
     output_ac = pvlib.pvsystem.pvwatts_ac(
         pdc=output_dc_loss_all*dcac,
-        ##### UPDATED 20180708 #####
-        # pdc0=1000,
         pdc0=1000/(1-loss_inverter),
-        ############################
         eta_inv_nom=(1-loss_inverter),
         eta_inv_ref=0.9637).fillna(0)
     if clip is True:
@@ -704,7 +691,7 @@ def pv_optimize_orientation_objective(
     n_ar=1.3, n_glass=1.526, 
     tempcoeff=-0.004, 
     # temp_model='open_rack_cell_polymerback',
-    temp_model='open_rack_glass_polymer', ### 20200126
+    temp_model='open_rack_glass_polymer',
     albedo=0.2, diffuse_model='reindl', 
     et_method='nrel', model_perez='allsitescomposite1990',
     axis_tilt_constant=None, axis_azimuth_constant=None,
@@ -848,7 +835,7 @@ def pv_optimize_orientation(
     n_ar=1.3, n_glass=1.526, 
     tempcoeff=-0.004, 
     # temp_model='open_rack_cell_polymerback',
-    temp_model='open_rack_glass_polymer', ### 20200126
+    temp_model='open_rack_glass_polymer',
     albedo=0.2, diffuse_model='reindl', 
     et_method='nrel', model_perez='allsitescomposite1990',
     ranges='default', full_output=False,

@@ -1055,8 +1055,7 @@ def model(system, return_model=False, solver=None, hours=None,
                         storcap_P[stor] 
                         - stordischarge[stor,period,hour] + storcharge[stor,period,hour])
                     ### Energy constraint
-                    # model += storreserves[stor,period,hour] <= storenergy[stor,period,hour]
-                    ### 20200701 - updated. If storage is discharging/charging in a given hour,
+                    ### If storage is discharging/charging in a given hour,
                     ### that affects the amount of energy available for providing reserves.
                     ### Essentially should treat reserves like discharge - both get a 1/eta.
                     model += storreserves[stor,period,hour] <= stors[stor].efficiency_discharge * (

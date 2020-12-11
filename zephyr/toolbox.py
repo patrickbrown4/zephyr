@@ -748,10 +748,7 @@ def polyoverlaparea_km2(poly1, poly2=None, method='intersection', returnpoly=Fal
                                  shapely.geometry.linestring.LineString]:
                 continue
             ### Get coords, bounds, and centroid
-            ######## 20200128
-            # coord = subpoly.exterior.coords
             coord = shapely.geometry.Polygon(subpoly).exterior.coords
-            ################################
             bound = subpoly.bounds
             ### Project into equal-area coordinates
             pa = pyproj.Proj("+proj=aea +lat_1={} +lat_2={} +lat_0={} +lon_0={}".format(

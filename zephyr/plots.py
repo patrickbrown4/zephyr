@@ -565,13 +565,13 @@ def plotquarthist(
             ax.set_xlim(x_locations[0] - 5 * abs(quartpad) * xscale, 
                         (x_locations[-1] + max(scaled_data_sets[-1])
                          + 1.5 * abs(histpad) * xscale)
-                        ) # ^ changed from 0 to 1.5 on 20180413
+                        )
         elif plothist and (direction == 'left'):
             ## Provide some extra padding on the left
             ax.set_xlim((x_locations[0] - max(scaled_data_sets[0]) 
                          - 1.5 * abs(histpad) * xscale), 
                         x_locations[-1] + 3 * abs(quartpad) * xscale
-                        ) # ^ changed from 3.0 to 1.5 on 20180413
+                        )
         ax.tick_params(axis='both', direction='out', top=False, right=False)
         for which in ['left', 'right', 'bottom', 'top']:
             ax.spines[which].set_visible(False)
@@ -1303,7 +1303,7 @@ def plotusascattermap(
             patchlegend(colors, edgecolor=markeredgecolor, **colorbarkwargs)
         ### Add hist if not categorial
         else:
-            cax = addcolorbarhist( ### ADDED 20200413 (ax = )
+            cax = addcolorbarhist(
                 f=f, ax0=ax, data=colordata, title=colorbartitle, cmap=cmap,
                 vmin=zrangeplot[0], vmax=zrangeplot[1],
                 # title_fontsize='x-large',
