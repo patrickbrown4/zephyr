@@ -19,3 +19,4 @@ dependencies:
     - jenkspy>=0.1.5
     - geopy>=1.19.0
     - h5pyd>=0.6.0
+    - xarray>=0.12.3

@@ -216,7 +216,8 @@ if resource == 'pv':
         for state in states
     }
 
-    savename_cfmean = outpath+(
+    savename_cfmean = os.path.join(
+        outpath,
         'mean-nsrdb,icomesh9-{}-{}t-{}az-{:.2f}dcac-{:.0f}USDperkWacyr-{}_{}.csv'
     ).format(
         systemtype, 
