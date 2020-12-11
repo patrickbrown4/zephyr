@@ -158,45 +158,6 @@ def queryNSRDBfile(filename=None, year=None, filepath=None, resolution=None,
     else:
         return dfsun, info, tz, elevation
 
-def getLMPfile(filepath, filename, tz, squeeze=False, product='lmp'):
-    """
-    To use for MCC, MCL, MCE (instead of LMP): 
-    * Keep default filepath, to io/lmp-nodal/da/, and specify
-      product='mcc' (or 'mcl' or 'mce')
-    * OR keep product as 'lmp' or None, and set filepath to the folder
-      containing the MCC/MCL/MCE file (i.e. to 'io/mcc-nodal/da/')
-    """
-    ### filepathify filepath
-    if filepath[-1] != '/': 
-        filepath = str(filepath+'/')
-
-    ### Normalize product
-    if (product is None) or product.lower() in ['lmp']:
-        product = 'lmp'
-    elif product.lower() in ['mcl','mlc','loss','losses']:
-        product = 'mcl'
-    elif product.lower() in ['mcc','congestion']:
-        product = 'mcc'
-    elif product.lower() in ['mce','mec','energy']:
-        product = 'mce'
-    else:
-        raise Exception("invalid product: {}".format(product))
-
-    ### Modifity lmp path to product path, if necessary
-    if product in ['mcc', 'mce', 'mcl']:
-        if filepath.count('lmp') != 1:
-            print(filepath)
-            print(product)
-            raise Exception("No 'lmp' found in filepath to replace")
-        filepath = filepath.replace('lmp', product)
-
-    ### Load file
-    dflmp = pd.read_csv(filepath+filename, index_col=0, header=None,
-        names=[product], squeeze=squeeze)
-    dflmp.index.names = [None]
-    dflmp.index = pd.to_datetime(dflmp.index).tz_convert(tz)
-    return dflmp
-
 ##################
 ### Solar capacity
 
@@ -1318,19 +1279,6 @@ def get_netload(iso, year, net='load', resolution=60, units='MW'):
     
     return df
 
-def getdflmp(iso, market, year, product='lmp'):
-    """
-    """
-    dirmodule = os.path.dirname(os.path.abspath(__file__)) + '/'
-    inpath = dirmodule + '../data/lmp/'
-
-    infile = '{}{}-{}-{}-{}.gz'.format(
-        inpath, iso.lower(), product, market, year)
-    df = pd.read_csv(infile, index_col=0, parse_dates=True)
-    # df = df.tz_localize('UTC').tz_convert(zephyr.toolbox.tz_iso[iso])
-    df = df.tz_convert(zephyr.toolbox.tz_iso[iso])
-    return df
-
 ##################################
 ### ISO historical wind generation
 
@@ -1810,103 +1758,6 @@ def getwindfile_caiso(year, filepath=None):
     )
 
     return dfwind
-
-############
-### GLUE ###
-
-def glue_iso_columns(iso):
-    """
-    returns (nsrdbindex, lmpindex, pnodeid, latlonindex, pnodename)
-    """
-    if iso.lower() == 'pjm':
-        nsrdbindex = 'latlonindex'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'latlonindex'
-        extra_key = 'latlonindex'
-        pnodename = 'nodename'
-    elif iso.lower() == 'caiso':
-        nsrdbindex = 'node'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'node'
-        pnodename = 'node'
-    elif iso.lower() == 'miso':
-        nsrdbindex = 'node'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'node'
-        extra_key = 'node'
-        pnodename = 'node'
-    elif iso.lower() == 'ercot':
-        nsrdbindex = 'latlonindex'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'latlonindex'
-        extra_key = 'latlonindex'
-        pnodename = 'node'
-    elif iso.lower() == 'isone':
-        nsrdbindex = 'node'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'node'
-        extra_key = 'node'
-        pnodename = 'node'
-    elif iso.lower() == 'nyiso':
-        nsrdbindex = 'latlonindex'
-        lmpindex = 'node'
-        pnodeid = 'node'
-        latlonindex = 'latlonindex'
-        extra_key = 'latlonindex'
-        pnodename = 'node'
-
-    return (nsrdbindex, lmpindex, pnodeid, latlonindex, pnodename)
-
-################
-### IO FILES ###
-
-def get_iso_nodes(iso, market='da', yearlmp=None, 
-    merge=False, fulltimeonly=False):
-    """
-    Inputs
-    ------
-    * fullhourslist: 'default' or dict(zip(isos, absolutefilepaths))
-    * nodelist: 'default' or dict(zip(isos, absolutefilepaths))
-
-    Returns
-    -------
-    * tuple of (fulltime, nodemap)
-
-    Usage
-    -----
-    dfin = nodemap.merge(fulltime, on=pnodeid)
-    """
-    ### Align labels and create filenames
-    pnodeid = glue_iso_columns(iso)[2]
-
-    fulltimefile = projpath + '{}/io/fulltimenodes/{}-{}lmp-fulltime-{}.csv'.format(
-        iso.upper(), iso.lower(), market, yearlmp)
-
-    nodemapfile = projpath + '{}/io/{}-node-latlon.csv'.format(
-        iso.upper(), iso.lower())
-
-    ### Load and return dataframes
-    if yearlmp is not None:
-        fulltime = pd.read_csv(
-            fulltimefile, header=None, names=[pnodeid])
-        if fulltimeonly == True:
-            return fulltime
-
-    nodemap = pd.read_csv(nodemapfile)
-
-    ### Return results
-    if yearlmp is None:
-        return nodemap
-    elif (yearlmp is not None) and (merge == False):
-        return fulltime, nodemap
-    elif merge == True:
-        dfout = nodemap.merge(fulltime, on=pnodeid)
-        return dfout
 
 
 ######################
