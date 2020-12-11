@@ -4,7 +4,7 @@
 * To set up your python environment, navigate to this directory and run:
     * `conda env create -f environment.yml`
     * `conda activate zephyr`
-* To use the renewable-energy supply-curve funcationality (not required for running the base capacity-expansion model), perform the following steps:
+* To use the renewable-energy supply-curve functionality (not required for running the base capacity-expansion model), perform the following steps:
     * Request an NREL API key from <https://developer.nrel.gov/signup/> and paste it into `apikeys['nrel']` in `settings.py`.
     * Follow the instructions at <https://github.com/NREL/hsds-examples> to set up h5pyd for the NREL HSDS endpoint. Namely:
         * Run `hsconfigure`
@@ -24,6 +24,9 @@
         * `-o test` indicates both the folder in which to store the outputs (`out/test`) and the cases file from which to read the input settings (`cases-test.xlsx`).
         * `-s clp` indicates that the COIN-LP solver should be used. `-s gurobi` also works if you have gurobi installed with a working license.
     * Alternative `cases-{}.xlsx` files are also included to reproduce the results from reference [1] below.
+* `zephyr-get-intraregion-transcost.py`
+    * Use this script after running all regions in a 'BApAC' scenario to calculate the inter-state intra-region transmission cost adders for a full US run
+        * An example output file is `io/transmission/transmission-adder-ba-base_case303.csv`
 ### Renewable-energy supply curves
 * `vresc_0-prepare-shapefiles.py`
     * Downloads some input data (primarily shapefile maps) from public sources and creates the US states zone map.
