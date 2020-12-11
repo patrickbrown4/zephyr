@@ -9,7 +9,7 @@ extdatapath = zephyr.settings.extdatapath
 ##########
 ### INPUTS
 
-dates = pd.date_range('1998-01-01','2018-12-31',freq='D')
+dates = pd.date_range('1997-01-01','2019-12-31',freq='D')
 outpath = os.path.join(extdatapath,'MERRA2','M2T1NXSLV','')
 os.makedirs(outpath, exist_ok=True)
 

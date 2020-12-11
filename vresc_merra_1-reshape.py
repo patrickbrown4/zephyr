@@ -18,7 +18,7 @@ extdatapath = zephyr.settings.extdatapath
 ##############
 ### INPUTS ###
 
-years = list(range(1998,2019))
+years = list(range(1997,2020))
 
 outcols = ['windspeed2M','windspeed10M','windspeed50M','T10M','PS','QV10M','DISPH']
 overwrite = False
