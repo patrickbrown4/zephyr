@@ -69,3 +69,4 @@
     * NREL EFS load (`io/load/EFS/*`)
     * Existing nuclear capacity (`io/nuclear/*`)
     * Wind turbine power curves (`io/wind/*`)
+    * Inter-state and -PA urban centroid distances (`io/transmission/{}-distance-urbancentroid-km.csv`)

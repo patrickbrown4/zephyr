@@ -124,13 +124,13 @@ class Storage:
             self.cost_annual_P = kwargs['cost_annual_P']
         ### Default boolean attributes
         self.has_power_maximum = False
-        self.has_power_minimum = False ### 20190729
+        self.has_power_minimum = False
         self.has_energy_maximum = False
-        self.has_energy_minimum = False ### 20190729
+        self.has_energy_minimum = False
         self.has_duration_maximum = False
-        self.has_duration_minimum = False ### 20191021
+        self.has_duration_minimum = False
         self.provides_reserves = bool(self.params['reserves'])
-        self.constrained_energy = True ### 20200924
+        self.constrained_energy = True
         
     def add_availability(self, availability=None):
         self.availability = availability
@@ -154,19 +154,18 @@ class Storage:
         self.has_energy_maximum = True
         return self    
 
-    def add_power_bound_lo(self, min_power):  ### 20190729
+    def add_power_bound_lo(self, min_power):
         """ Units: GW """
         self.power_bound_lo = min_power
         self.has_power_minimum = True
         return self
 
-    def add_energy_bound_lo(self, min_energy):  ### 20190729
+    def add_energy_bound_lo(self, min_energy):
         """ Units: GWh """
         self.energy_bound_lo = min_energy
         self.has_energy_minimum = True
         return self
 
-    ### 20191021
     def add_duration_min(self, duration_min):
         """ Units: hours [MWh/MWac] """
         self.duration_min = duration_min
@@ -227,11 +226,10 @@ class Gen:
             self.cost_annual = self.cost_capex * crf(self.wacc, self.lifetime)
         else:
             self.cost_annual = kwargs['cost_annual']
-        # self.cost_annual = self.params['cost_annual']
         self.availability = {}
         self.periods = []
         self.has_capacity_maximum = False
-        self.has_capacity_minimum = False ### 20190729
+        self.has_capacity_minimum = False
         self.always_available = True
         self.provides_reserves = bool(self.params['reserves'])
         self.perfectly_rampable = (
@@ -261,7 +259,7 @@ class Gen:
         self.has_capacity_maximum = True
         return self
 
-    def add_capacity_bound_lo(self, min_capacity):  ### 20190729
+    def add_capacity_bound_lo(self, min_capacity):
         """ Units: GW """
         self.capacity_bound_lo = min_capacity
         self.has_capacity_minimum = True
@@ -315,7 +313,7 @@ class HydroRes:
         self.availability = {}
         self.periods = []
         self.has_capacity_maximum = False
-        self.has_capacity_minimum = False ### 20190729
+        self.has_capacity_minimum = False
         self.always_available = True
         self.provides_reserves = bool(self.params['reserves'])
         self.perfectly_rampable = (
@@ -348,7 +346,7 @@ class HydroRes:
         self.has_capacity_maximum = True
         return self
 
-    def add_capacity_bound_lo(self, min_capacity):  ### 20190729
+    def add_capacity_bound_lo(self, min_capacity):
         """ Units: GW """
         self.capacity_bound_lo = min_capacity
         self.has_capacity_minimum = True
@@ -771,8 +769,8 @@ def model(system, return_model=False, solver=None, hours=None,
             ### Year-end wrap
             model += genpower[gen,period,0] == genpower[gen,period,hours[period]]
             #### Minimum-generation level
-            #### IMPORTANT: 20191111 - Changed to multiply by availability.
-            #### This makes it work for ROR (which is must-take but with variable availability)
+            #### Multiply by availability.
+            #### That makes it work for ROR (which is must-take but with variable availability)
             #### and could also make it work for collections of generators with scheduled
             #### outages - such as if one nuclear plant is turned off for a month
             for hour in range(hours[period]):
@@ -803,7 +801,7 @@ def model(system, return_model=False, solver=None, hours=None,
                     model += (
                         storcharge[stor,period,hour] + stordischarge[stor,period,hour]
                         + storreserves[stor,period,hour] * system.cycling_reserves_power
-                    ) <= storcap_p[stor]
+                    ) <= storcap_P[stor]
             #### Continuity
             ### Default: Storage reserves don't cycle or incur efficiency losses
             if (system.cycling_reserves == False) or (system.has_reserves == False):
@@ -1188,8 +1186,6 @@ def model(system, return_model=False, solver=None, hours=None,
         'co2shadowprice': (-model.constraints['co2cap'].__dict__['pi']*1E6 
                            if system.has_co2cap else 0),
         ### LCOE in $/MWh
-        ### 20191018 - changed below to accurately reflect annual costs
-        # 'lcoe': pulp.value(model.objective) * 1000 * len(periods) / load_cumulative, 
         'lcoe': pulp.value(model.objective) * 1000 / load_cumulative, 
         'co2rate':  sum(
             [(np.array(output_operation[period][gen]) * gens[gen].emissionsrate).sum()
@@ -1221,7 +1217,7 @@ def model(system, return_model=False, solver=None, hours=None,
         out = (output_capacity, output_operation, output_values, system)
     elif includedual is True:
         out = (output_capacity, output_operation, output_values, system, dfdual)
-    ### Include reserves ### 20190729
+    ### Include reserves
     if system.has_reserves and (includereserves is True):
         if includedual is False:
             out = (output_capacity, output_operation, output_values, output_reserves, system)

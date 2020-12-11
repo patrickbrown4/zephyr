@@ -24,7 +24,14 @@ in/
 # office temp files
 ~$*
 
-# individual large files which are created by included scripts
+# individual large files that are created by included scripts
 io/geo/usa-points*
 io/geo/world-points*
 io/geo/hsdscoords*
+
+# NREL ReEDS files
+io/transmission/reeds-transmission-GW-state.csv
+io/transmission/reeds-transmission-GW-ba.csv
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/

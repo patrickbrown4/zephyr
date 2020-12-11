@@ -48,11 +48,9 @@ def plotparams():
     """
     plt.rcParams['font.sans-serif'] = 'Arial'
     plt.rcParams['font.family'] = 'sans-serif'
-    ### >>> Added 20191014
     plt.rcParams['mathtext.rm'] = 'Arial'
     plt.rcParams['mathtext.it'] = 'Arial:italic'
     plt.rcParams['mathtext.bf'] = 'Arial:bold'
-    ### <<<
     plt.rcParams['axes.labelweight'] = 'bold'
     plt.rcParams['axes.labelsize'] = 'x-large'
     plt.rcParams['xtick.direction'] = 'in'
@@ -64,7 +62,7 @@ def plotparams():
     plt.rcParams['savefig.dpi'] = 300
     plt.rcParams['savefig.bbox'] = 'tight'
     # plt.rcParams['figure.figsize'] = 6.4, 4.8 # 1.33, matplotlib default
-    # plt.rcParams['figure.figsize'] = 4.792, 3.458 # 1.38577, Igor my default
+    # plt.rcParams['figure.figsize'] = 4.792, 3.458 # 1.38577, old default
     # plt.rcParams['figure.figsize'] = 5.0, 4.0 # 1.25
     plt.rcParams['figure.figsize'] = 5.0, 3.75 # 1.33, fits 4x in ppt slide
     plt.rcParams['xtick.major.size'] = 4 # default 3.5

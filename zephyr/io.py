@@ -194,9 +194,7 @@ def getLMPfile(filepath, filename, tz, squeeze=False, product='lmp'):
     dflmp = pd.read_csv(filepath+filename, index_col=0, header=None,
         names=[product], squeeze=squeeze)
     dflmp.index.names = [None]
-    dflmp.index = pd.to_datetime(dflmp.index).tz_convert(tz) ###### Changed 20190412
-    # dflmp.index = dflmp.index.tz_localize('UTC')
-    # dflmp.index = dflmp.index.tz_convert(tz)
+    dflmp.index = pd.to_datetime(dflmp.index).tz_convert(tz)
     return dflmp
 
 ##################
@@ -739,7 +737,6 @@ def getferc(data='demand', datalist=False, form=714):
     """
     Get load from FERC database (note that this is just for full-ISO load)
     https://www.ferc.gov/docs-filing/forms/form-714/data/form714-database.zip
-    20190625: downloaded 2018 FERC database and replaced old file
     """
     folderpath = datapath+'FERC/form714-database/'
     ### Download the file if it doesn't exist

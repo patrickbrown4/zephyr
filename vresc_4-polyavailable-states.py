@@ -8,7 +8,6 @@ from glob import glob
 from tqdm import tqdm, trange
 import geopandas as gpd
 import pyproj
-from IPython.display import display, HTML
 
 import zephyr
 

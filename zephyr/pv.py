@@ -87,9 +87,7 @@ def timeserieslineup(
     -----
     * Both timeseries need to be one year long, and span Jan1 - Dec31
     * Both timeseries need to have timezone information
-    * Updated version (20190828) to allow specification of single-year
-      or multi-year operation. If oneyear==False, it won't correct 
-      leap years.
+    * If oneyear==False, it won't correct leap years.
     """
     ### Make copies
     ds1, ds2 = series1.copy(), series2.copy()
@@ -503,17 +501,14 @@ def pv_system_sim(
 
     ### Get surface tilt, from tracker data if necessary
     if systemtype == 'track':
-        ###### ADDED 20190414 ######
         with np.errstate(invalid='ignore'):
             tracker_data = pvlib.tracking.singleaxis(
                 apparent_zenith=solpos['apparent_zenith'], 
                 apparent_azimuth=solpos['azimuth'],
                 axis_tilt=axis_tilt, axis_azimuth=axis_azimuth, 
                 max_angle=max_angle, backtrack=backtrack, gcr=gcr)
-        ############################
         surface_tilt = tracker_data['surface_tilt']
         surface_azimuth = tracker_data['surface_azimuth']
-        ###### ADDED 20180712 ######
         surface_tilt = surface_tilt.fillna(axis_tilt).replace(0., axis_tilt)
         surface_azimuth = surface_azimuth.fillna(axis_azimuth)
 
@@ -544,7 +539,6 @@ def pv_system_sim(
     # celltemp = pvlib.pvsystem.sapm_celltemp(
     #     poa_irrad['poa_global_reflectlosses'], dfsun['Wind Speed'], 
     #     dfsun['Temperature'], temp_model)['temp_cell']
-    ### UPDATED 20200126
     temp_model_params = (
         pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm'][temp_model])
     celltemp = pvlib.temperature.sapm_cell(

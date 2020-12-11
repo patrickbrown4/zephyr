@@ -491,16 +491,12 @@ def pointpolymap(
         dfpoints = dfpointsin.reset_index(drop=True)
         dfpoly = dfpolyin.reset_index(drop=True)
     else:
-        ### changed 20190620
-        # dfpoints, dfpoly = dfpointsin.copy(), dfpolyin.copy()
         dfpoints, dfpoly = dfpointsin.copy(), dfpolyin
         
     point_lonlats = list(zip(dfpoints[x].values, dfpoints[y].values))
-    ###### added 20190620
     if type(dfpoly) == shapely.geometry.polygon.Polygon:
         namelist = [True]
         geoms = [dfpoly]
-        ###############################
     else:
         namelist = dfpoly[zone].copy()
         geoms = dfpoly.geometry.copy()
@@ -597,15 +593,11 @@ def voronoi_polygons(dfpoints):
     ]
 
     ### Make shapely polygons, coords, and bounds
-    ###### CHANGED 20190911 - Intersect each poly with region bounds
-    ### Original
-    # polys = [poly for poly in shapely.ops.polygonize(lines)]
-    ### New
+    ### Intersect each poly with region bounds
     regionhull = (
         shapely.geometry.MultiPoint(dfpoints[[lonlabel,latlabel]].values)
         .convex_hull)
     polys = [poly.intersection(regionhull) for poly in shapely.ops.polygonize(lines)]
-    ###### Continue
     coords = [list(poly.exterior.coords) for poly in polys]
     bounds = [list(poly.bounds) for poly in polys] ### (minx, miny, maxx, maxy)
     centroid_x = [poly.centroid.x for poly in polys]
