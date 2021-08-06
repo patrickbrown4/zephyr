@@ -1575,3 +1575,52 @@ def differentiate_lines(ax, cycle=10, linestyles=['--',':','-.']):
                 _differentiate_lines_sub(sub, cycle, linestyles)
     else:
         _differentiate_lines_sub(ax, cycle, linestyles)
+
+
+def annotate(ax, label, x, offset, decimals=0, **kwargs):
+    """
+    Annotate a point on a line.
+
+    Inputs
+    ------
+    * ax: matplotlib axis object
+    * label: label of trace to annotate
+    * x: x value to annotate
+    * offset (tuple): (x,y) label offset in points
+    * decimals: decimals to show in annotated value
+    * **kwargs: additional keyword arguments for ax.annotate()
+
+    Outputs
+    -------
+    None
+    """
+    ### Get the point to plot
+    lineindex = [l._label for l in ax.get_lines()].index(label)
+    try:
+        pointindex = ax.get_lines()[lineindex]._xorig.tolist().index(x)
+    except ValueError:
+        pointindex = ax.get_lines()[lineindex]._x.tolist().index(x)
+    except ValueError:
+        raise ValueError('Need to specify an x value in the plotted trace')
+    y = ax.get_lines()[lineindex]._yorig[pointindex]
+    color = ax.get_lines()[lineindex]._color
+    
+    ### Get kwargs
+    noteprops = {
+        'fontsize':'medium',
+        'arrowprops':{'arrowstyle':'-|>', 'color':color},
+    }
+    for key in kwargs:
+        noteprops[key] = kwargs[key]
+
+    ### Annotate it
+    ax.annotate(
+        ('{:.'+str(decimals)+'f}').format(y),
+        xy=(x,y),
+        textcoords='offset points',
+        xytext=offset,
+        ha='left' if offset[0] > 0 else 'right' if offset[0] < 0 else 'center',
+        va='bottom' if offset[1] > 0 else 'top' if offset[1] < 0 else 'center',
+        color=color,
+        **noteprops,
+    )
