@@ -386,7 +386,7 @@ def get_latlonlabels(df, latlonlabels=None, columns=None):
     elif ('Lat' in columns) and ('Long' in columns):
         latlabel, lonlabel = 'Lat', 'Long'
     elif ('x' in columns) and ('y' in columns):
-        latlabel, lonlabel = 'x', 'y'
+        latlabel, lonlabel = 'y', 'x'
     
     return latlabel, lonlabel
 

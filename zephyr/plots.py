@@ -1422,7 +1422,7 @@ def plotyearbymonth(dfs, plotcols=None, colors=None,
         ax[i].set_yticks([])
         ax[i].set_xticks([])
 
-    ax[0].set_xlim('2001-01-01 00:00', '2001-02-01 00:00')
+    ax[0].set_xlim(pd.to_datetime('2001-01-01 00:00'), pd.to_datetime('2001-02-01 00:00'))
     if normalize:
         ax[0].set_ylim(0, 1)
     else:
@@ -1608,6 +1608,7 @@ def annotate(ax, label, x, offset, decimals=0, **kwargs):
     ### Get kwargs
     noteprops = {
         'fontsize':'medium',
+        'color':color,
         'arrowprops':{'arrowstyle':'-|>', 'color':color},
     }
     for key in kwargs:
@@ -1621,6 +1622,5 @@ def annotate(ax, label, x, offset, decimals=0, **kwargs):
         xytext=offset,
         ha='left' if offset[0] > 0 else 'right' if offset[0] < 0 else 'center',
         va='bottom' if offset[1] > 0 else 'top' if offset[1] < 0 else 'center',
-        color=color,
         **noteprops,
     )
