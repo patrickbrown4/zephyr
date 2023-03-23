@@ -30,7 +30,7 @@ class WindSystem:
                  height=100,
                  powercurve_source='wtk',
                  powercurve_model='wtk',
-                 density_st=1.225,
+                 density_std=1.225,
                  loss_system=0.05,
                  number_of_turbines=8,
                  hystwindow=5,
@@ -43,7 +43,7 @@ class WindSystem:
         self.height = height
         self.powercurve_source = powercurve_source
         self.powercurve_model = powercurve_model
-        self.density_st = density_st
+        self.density_std = density_std
         self.loss_system = loss_system
         self.number_of_turbines = number_of_turbines
         self.hystwindow = hystwindow
@@ -67,7 +67,7 @@ class WindSystem:
             number_of_turbines=self.number_of_turbines, 
             drive=drive, humidity=self.humidity, 
             hystwindow=self.hystwindow, orders=self.orders,
-            pv_vmax=self.pc_vmax, projpath=projpath, nans=nans)
+            pc_vmax=self.pc_vmax, projpath=projpath, nans=nans)
 
 
 #################
@@ -425,7 +425,7 @@ def windsim(site_id=None, height=100, dfwind=None,
     key=None, density_std =1.225,
     loss_system=0.,
     number_of_turbines=None,
-    drive='RAID', humidity=None,
+    humidity=None,
     hystwindow=5, orders=4, pc_vmax=None,
     nans='raise',
     temp_cutoff=None,
