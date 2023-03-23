@@ -1,16 +1,15 @@
-#%% Imports
+#%%### Imports
 import pandas as pd
 import numpy as np
-import os, sys, site, math, time, pickle, gzip
-from glob import glob
-from tqdm import tqdm, trange
-from warnings import warn
+import os, sys, time, pickle, gzip
 
 import pulp
 
+#%%### Functions
+
 def cem(system, return_model=False, solver=None, hours=None,
-    verbose=True, savename=None, includedual=False, includereserves=False,
-    **solverkwargs):
+        verbose=True, savename=None, includedual=False, includereserves=False,
+        **solverkwargs):
     """
     """
     ###### Input formatting

@@ -1,19 +1,15 @@
-#%% Imports
+#%%### Imports
 import pandas as pd
 
 
-#################
-### FUNCTIONS ###
-#################
+#%%### Functions
 
 def crf(wacc, lifetime):
     out = ((wacc * (1 + wacc) ** lifetime) 
            / ((1 + wacc) ** lifetime - 1))
     return out
 
-#######################
-### GENERAL CLASSES ###
-#######################
+#%%### Classes
 
 class Defaults:
     """
