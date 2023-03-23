@@ -101,7 +101,7 @@ dfstate = pd.read_excel(
 
 ### Economic and simulation assumptions
 infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
-defaults = zephyr.cpm.Defaults(infile)
+defaults = zephyr.system.Defaults(infile)
 
 ### Distance parameters
 urban = 'edge'
@@ -190,6 +190,7 @@ for case in runcases:
         life_stor = None
     interconnection_scaler = cases.loc[case,'interconnection_scaler']
     region_scaler_file = cases.loc[case,'region_scaler']
+    pvscale = cases.loc[case,'pvscale']
 
     ###### Distance parameters
     distancepath = os.path.join(
@@ -595,7 +596,7 @@ for case in runcases:
 
         #####################
         ### Set up the system
-        system = zephyr.cpm.System(region, periods=[0], nodes=list(nodes))
+        system = zephyr.system.System(region, periods=[0], nodes=list(nodes))
         system.hours = {0:len(dfrun)}
         system.years = numyears
 
@@ -614,7 +615,7 @@ for case in runcases:
                 name = '{}|{}_ac_old'.format(*pair)
                 system.add_line(
                     name=name,
-                    line=zephyr.cpm.Line(
+                    line=zephyr.system.Line(
                         node1=node1, node2=node2,
                         distance=dfdistance.loc[node1,node2],
                         capacity=dftrans.loc[pair,'AC'],
@@ -629,7 +630,7 @@ for case in runcases:
                 name = '{}|{}_dc_old'.format(*pair)
                 system.add_line(
                     name=name,
-                    line=zephyr.cpm.Line(
+                    line=zephyr.system.Line(
                         node1=node1, node2=node2,
                         distance=dfdistance.loc[node1,node2],
                         capacity=dftrans.loc[pair,'DC'],
@@ -646,7 +647,7 @@ for case in runcases:
             ### and if the switch is on
             if build_ac and (dftrans.loc[pair,'AC'] > 0):
                 name = '{}|{}_ac_new'.format(*pair)
-                line = zephyr.cpm.Line(
+                line = zephyr.system.Line(
                     node1=node1, node2=node2,
                     distance=dfdistance.loc[node1,node2],
                     voltage=build_ac_voltage,
@@ -667,7 +668,7 @@ for case in runcases:
             ### In a later verion, allow this restriction to be relaxed.
             if build_dc and (dftrans.loc[pair,'DC'] > 0) and (dftrans.loc[pair, 'AC'] == 0):
                 name = '{}|{}_dc_new'.format(*pair)
-                line = zephyr.cpm.Line(
+                line = zephyr.system.Line(
                     node1=node1, node2=node2,
                     distance=dfdistance.loc[node1,node2],
                     voltage='DC',
@@ -686,7 +687,7 @@ for case in runcases:
                 for gen in ['OCGT', 'CCGT']:
                     system.add_generator(
                         '{}_{}'.format(gen,node), 
-                        zephyr.cpm.Gen(
+                        zephyr.system.Gen(
                             gen, defaults=defaults, fuel=gasprice, wacc=wacc_gen,
                             lifetime=life_gen,
                         ).localize(node)
@@ -697,15 +698,15 @@ for case in runcases:
             for node in nodes:
                 system.add_generator(
                     'Lostload_{}'.format(node), 
-                    zephyr.cpm.Gen(
+                    zephyr.system.Gen(
                         'Lostload', defaults=defaults, cost_vom=voll).localize(node)
                 )
 
         ### Add storage
-        annualcost_E = zephyr.cpm.Storage(
+        annualcost_E = zephyr.system.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
             lifetime=life_stor,).cost_annual_E * storscale
-        annualcost_P = zephyr.cpm.Storage(
+        annualcost_P = zephyr.system.Storage(
             cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
             lifetime=life_stor,).cost_annual_P * storscale
         for node in nodes:
@@ -718,7 +719,7 @@ for case in runcases:
                 annualcost_P_node = annualcost_P * 1
             system.add_storage(
                 'Stor_{}'.format(node), 
-                zephyr.cpm.Storage(
+                zephyr.system.Storage(
                     cases.loc[case,'stor'], defaults=defaults, wacc=wacc_gen,
                     cost_annual_E=annualcost_E_node, cost_annual_P=annualcost_P_node,
                     cost_vom=vom_stor,
@@ -731,7 +732,7 @@ for case in runcases:
                 if node in phscap:
                     system.add_storage(
                         'PHS_{}'.format(node),
-                        (zephyr.cpm.Storage(
+                        (zephyr.system.Storage(
                             'PHS', defaults=defaults, cost_capex_E=0, cost_capex_P=0,)
                          .add_duration_min(include_phs).add_duration_max(include_phs)
                          .add_power_bound_hi(phscap[node])
@@ -745,7 +746,7 @@ for case in runcases:
                 if node in nuclearcap:
                     system.add_generator(
                         'Nuclear_{}_old'.format(node),
-                        (zephyr.cpm.Gen('Nuclear_existing', defaults=defaults)
+                        (zephyr.system.Gen('Nuclear_existing', defaults=defaults)
                          .add_capacity_bound_hi(nuclearcap[node])
                          ### Following line is commented out to allow retirements
                          #.add_capacity_bound_lo(nuclearcap[node])
@@ -758,7 +759,7 @@ for case in runcases:
             for node in nodes:
                 system.add_generator(
                     'Nuclear_{}_new'.format(node),
-                    zephyr.cpm.Gen(
+                    zephyr.system.Gen(
                         build_nuclear, defaults=defaults, wacc=wacc_gen,
                         lifetime=life_gen,
                         gen_min=nuclear_gen_min, 
@@ -770,7 +771,7 @@ for case in runcases:
         index = dfrun.index.copy()
         ###### PV
         ### Get the generator annual cost
-        annualcost = zephyr.cpm.Gen(
+        annualcost = zephyr.system.Gen(
             cases.loc[case,'pv'], defaults=defaults, wacc=wacc_gen,
             lifetime=life_gen,).cost_annual * pvscale
         for node in nodes:
@@ -783,7 +784,7 @@ for case in runcases:
             for jbin in bins_pv[node]:
                 system.add_generator(
                     'PV_{}_{}'.format(node,jbin),
-                    zephyr.cpm.Gen(
+                    zephyr.system.Gen(
                         cases.loc[case,'pv'], defaults=defaults,
                         cost_annual=(
                             annualcost_node
@@ -802,7 +803,7 @@ for case in runcases:
 
         ###### Wind
         ### Get the generator annual cost
-        annualcost = zephyr.cpm.Gen(
+        annualcost = zephyr.system.Gen(
             cases.loc[case,'wind'], defaults=defaults, wacc=wacc_gen,
             lifetime=life_gen,).cost_annual * windscale
         for node in nodes:
@@ -815,7 +816,7 @@ for case in runcases:
             for jbin in bins_wind[node]:
                 system.add_generator(
                     'Wind_{}_{}'.format(node,jbin),
-                    zephyr.cpm.Gen(
+                    zephyr.system.Gen(
                         cases.loc[case,'wind'], defaults=defaults, cost_vom=vom_wind,
                         cost_annual=(
                             annualcost_node
@@ -859,7 +860,7 @@ for case in runcases:
 
 
         ### Solve it
-        _ = zephyr.cpm.model(
+        _ = zephyr.cem.cem(
             system, solver=solver, verbose=verbose, 
             includereserves=False, includemodel=False,
             savename=savename,

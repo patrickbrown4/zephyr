@@ -79,8 +79,8 @@ wacc_gen = 0.042
 wacc_trans = 0.036
 lifetime_gen = 25
 lifetime_trans = 50
-crf_gen = zephyr.cpm.crf(wacc=wacc_gen, lifetime=lifetime_gen)
-crf_trans = zephyr.cpm.crf(wacc=wacc_trans, lifetime=lifetime_trans)
+crf_gen = zephyr.system.crf(wacc=wacc_gen, lifetime=lifetime_gen)
+crf_trans = zephyr.system.crf(wacc=wacc_trans, lifetime=lifetime_trans)
 
 def cost_trans_annual(row):
     out = row['cost_trunk_upfront'] * crf_trans + row['cost_spur_upfront'] * crf_gen

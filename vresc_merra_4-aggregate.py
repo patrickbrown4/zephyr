@@ -482,7 +482,7 @@ for zone in bas:
 
     ### Economic and simulation assumptions
     infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
-    defaults = zephyr.cpm.Defaults(infile)
+    defaults = zephyr.system.Defaults(infile)
 
     windcost = 'Wind_2030_mid'
 
@@ -491,8 +491,8 @@ for zone in bas:
     wacc_trans = 0.04
     lifetime_gen = 30
     lifetime_trans = 50
-    crf_gen = zephyr.cpm.crf(wacc=wacc_gen, lifetime=lifetime_gen)
-    crf_trans = zephyr.cpm.crf(wacc=wacc_trans, lifetime=lifetime_trans)
+    crf_gen = zephyr.system.crf(wacc=wacc_gen, lifetime=lifetime_gen)
+    crf_trans = zephyr.system.crf(wacc=wacc_trans, lifetime=lifetime_trans)
 
     ### Set output file location and savenames
     distancepath = os.path.join(projpath,'io','cf-1998_2018','state','')
@@ -530,7 +530,7 @@ for zone in bas:
              height, loss_system_wind*100, windcost[5:], zonesource, zone)
 
     ### Make the generator
-    gen = zephyr.cpm.Gen(windcost, defaults=defaults)
+    gen = zephyr.system.Gen(windcost, defaults=defaults)
 
     ### Specify timeseries to simulate over
     years = list(range(1998,2019))

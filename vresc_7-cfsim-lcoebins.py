@@ -150,13 +150,13 @@ except ValueError:
 
 ### Generator cost (annualized capex + FOM)
 infile = os.path.join(projpath,'io','generator_fuel_assumptions.xlsx')
-defaults = zephyr.cpm.Defaults(infile)
+defaults = zephyr.system.Defaults(infile)
 pvcost = 'PV_track_2030_mid'
 windcost = 'Wind_2030_mid'
 if resource == 'pv':
-    gen = zephyr.cpm.Gen(pvcost, defaults=defaults)
+    gen = zephyr.system.Gen(pvcost, defaults=defaults)
 elif resource == 'wind':
-    gen = zephyr.cpm.Gen(windcost, defaults=defaults)
+    gen = zephyr.system.Gen(windcost, defaults=defaults)
 gencostannual = gen.cost_annual + gen.cost_fom
 
 ### Wind system losses
