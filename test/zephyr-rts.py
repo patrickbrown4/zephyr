@@ -1,5 +1,6 @@
 #%% General imports
 import pandas as pd
+import numpy as np
 import os, site, copy
 
 ### Local imports
@@ -102,15 +103,33 @@ def create_system(rtspath, defaultsfile):
     ## Scale up by loadmult
     ) * loadmult
 
-    #%% Transmission - just make up distances in km
-    dfdistance = pd.DataFrame(
-        {
-            'z1': [0, 500, 500],
-            'z2': [500, 0, 500],
-            'z3': [500, 500, 0],
-        },
-        index=['z1', 'z2', 'z3'],
-    )
+    #%% Transmission distances - just take the centroid of the buses in each area
+    try:
+        import geopandas as gpd
+        dfbus = (
+            gpd.read_file(
+                os.path.join(rtspath,'RTS_Data','FormattedData','GIS','bus.geojson'))
+            .to_crs('ESRI:102008')
+        )
+        dfbus['zone'] = 'z' + dfbus['Area'].astype(str)
+        centroids = dfbus.dissolve('zone').centroid
+        dfdistance = {}
+        for zone in centroids.index:
+            dfdistance[zone] = np.sqrt(
+                (centroids.x - float(centroids[[zone]].x))**2
+                + (centroids.y - float(centroids[[zone]].y))**2
+            ) / 1e3
+        dfdistance = pd.concat(dfdistance).unstack().round(3)
+    except Exception as err:
+        print(f'geopandas error: {err}\nFalling back to filler transmission distances')
+        dfdistance = pd.DataFrame(
+            {
+                'z1': [0, 500, 500],
+                'z2': [500, 0, 500],
+                'z3': [500, 500, 0],
+            },
+            index=['z1', 'z2', 'z3'],
+        )
 
     links = [('z1', 'z2'), ('z2', 'z3'), ('z1', 'z3')]
 
