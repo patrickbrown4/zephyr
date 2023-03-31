@@ -13,7 +13,6 @@ dependencies:
   - ipykernel
   - openpyxl
   - pip:
-    # - pvlib>=0.7.1
     - pvlib==0.7.*
     - pulp>=1.6.*
     - jenkspy>=0.1.5
