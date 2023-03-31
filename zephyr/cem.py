@@ -22,13 +22,13 @@ def cem(system, return_model=False, solver=None, hours=None,
     if solver == 'gurobi':
         # solver = pulp.GUROBI_CMD(msg=0)
         # solver = pulp.GUROBI_CMD(msg=(1 if verbose in [2,3] else 0))
-        solver = pulp.GUROBI_CMD(msg=(1 if verbose in [2,3] else 0), 
+        solver = pulp.GUROBI_CMD(msg=(1 if verbose in [2,3] else 0),
                                  options=solverkwargs.items())
     elif solver in ['cbc', 'default', 'coin', 'clp', None]:
         solver = pulp.PULP_CBC_CMD()
     elif solver in ['gurobipy']:
         solver = pulp.GUROBI()
-        
+
     ###### Get parameters from setup
     gens = system.generators
     stors = system.storages
@@ -43,34 +43,34 @@ def cem(system, return_model=False, solver=None, hours=None,
 
     ###### Instantiate problem class
     tic = time.perf_counter()
-    model = pulp.LpProblem("Linear capacity expansion", pulp.LpMinimize)
+    model = pulp.LpProblem("CapacityExpansionModel", pulp.LpMinimize)
 
     ###### Construct time-resolved variables
     ### Generator powers
     genpower = pulp.LpVariable.dicts(
         'genpower',
-        ((gen, period, hour) 
+        ((gen, period, hour)
          for gen in gens for period in periods for hour in range(hours[period]+1)),
         lowBound=0, cat='Continuous')
 
     ### Storage charge
     storcharge = pulp.LpVariable.dicts(
         'storcharge',
-        ((stor, period, hour) 
+        ((stor, period, hour)
          for stor in stors for period in periods for hour in range(hours[period]+1)),
         lowBound=0, cat='Continuous')
 
     ### Storage discharge
     stordischarge = pulp.LpVariable.dicts(
         'stordischarge',
-        ((stor, period, hour) 
+        ((stor, period, hour)
          for stor in stors for period in periods for hour in range(hours[period]+1)),
         lowBound=0, cat='Continuous')
 
     ### Storage energy
     storenergy = pulp.LpVariable.dicts(
         'storenergy',
-        ((stor, period, hour) 
+        ((stor, period, hour)
          for stor in stors for period in periods for hour in range(hours[period]+1)),
         lowBound=0, cat='Continuous')
 
@@ -111,13 +111,13 @@ def cem(system, return_model=False, solver=None, hours=None,
         ### Generators
         genreserves = pulp.LpVariable.dicts(
             'genreserves',
-            ((gen, period, hour) 
+            ((gen, period, hour)
              for gen in gens for period in periods for hour in range(hours[period]+1)),
             lowBound=0, cat='Continuous')
         ### Storage
         storreserves = pulp.LpVariable.dicts(
             'storreserves',
-            ((stor, period, hour) 
+            ((stor, period, hour)
              for stor in stors for period in periods for hour in range(hours[period]+1)),
             lowBound=0, cat='Continuous')
         ### Reservoir hydro
@@ -202,13 +202,13 @@ def cem(system, return_model=False, solver=None, hours=None,
             reshydros[res].cost_annual + reshydros[res].cost_fom) * years
            for res in reshydros]
         ### VOM cost
-        + [respower[res,period,hour] * reshydros[res].cost_vom 
+        + [respower[res,period,hour] * reshydros[res].cost_vom
            for res in reshydros for period in periods for hour in range(hours[period])]
         ##### Transmission capacity; new build
         + [newlinecap[line] * (lines[line].cost_annual + lines[line].cost_fom) * years
            for line in newlines]
         #### Transmission VOM
-        + [(flowpos[line,period,hour] * lines[line].cost_vom 
+        + [(flowpos[line,period,hour] * lines[line].cost_vom
             + flowneg[line,period,hour] * lines[line].cost_vom)
            for line in lines for period in periods for hour in range(hours[period])]
     )
@@ -233,7 +233,7 @@ def cem(system, return_model=False, solver=None, hours=None,
             else:
                 ### Ramp up
                 for hour in range(1, hours[period]+1):
-                    model += (genpower[gen,period,hour] - genpower[gen,period,hour-1] 
+                    model += (genpower[gen,period,hour] - genpower[gen,period,hour-1]
                               <= gencap[gen] * gens[gen].ramp_up)
                 ### Ramp down
                 for hour in range(1, hours[period]+1):
@@ -330,7 +330,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                     pulp.lpSum([genpower[gen,period,hour] for gen in gens
                                 if gens[gen].node == node])
                     ### Storage
-                    + pulp.lpSum([stordischarge[stor,period,hour] - storcharge[stor,period,hour] 
+                    + pulp.lpSum([stordischarge[stor,period,hour] - storcharge[stor,period,hour]
                                   for stor in stors
                                   if stors[stor].node == node])
                     ### Hydro
@@ -338,20 +338,20 @@ def cem(system, return_model=False, solver=None, hours=None,
                                   if reshydros[res].node == node])
                     ##### Transmission
                     ### Forward flow in lines starting at node; no losses (save for end)
-                    - pulp.lpSum([flowpos[line,period,hour] 
-                                  for line in lines 
+                    - pulp.lpSum([flowpos[line,period,hour]
+                                  for line in lines
                                   if lines[line].node1 == node])
                     ### Reverse flow in lines starting at node; subject to losses
                     + pulp.lpSum([flowneg[line,period,hour] * (1 - lines[line].loss)
-                                  for line in lines 
+                                  for line in lines
                                   if lines[line].node1 == node])
                     ### Forward flow in lines ending at node; subject to losses
                     + pulp.lpSum([flowpos[line,period,hour] * (1 - lines[line].loss)
-                                  for line in lines 
+                                  for line in lines
                                   if lines[line].node2 == node])
                     ### Reverse flow in lines ending at node; no losses (save for end)
                     - pulp.lpSum([flowneg[line,period,hour]
-                                  for line in lines 
+                                  for line in lines
                                   if lines[line].node2 == node])
                 ) == loads[period][node][hour], 'price_p{}_l{}_h{}'.format(period,node,hour)
 
@@ -369,7 +369,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                     model += (
                         flowpos[line,period,hour] + flowneg[line,period,hour]
                     ) * (1 - lines[line].loss) <= lines[line].capacity
-                    
+
             # if line.split('_')[-1] == 'new':
             if lines[line].newbuild == True:
                 for hour in range(hours[period]):
@@ -381,11 +381,11 @@ def cem(system, return_model=False, solver=None, hours=None,
                     model += (
                         flowpos[line,period,hour] + flowneg[line,period,hour]
                     ) * (1 - lines[line].loss) <= newlinecap[line]
-            
+
             ### Year-end wrap
             model += flowpos[line,period,0] == flowpos[line,period,hours[period]]
             model += flowneg[line,period,0] == flowneg[line,period,hours[period]]
-    
+
         ###### Hydro constraints
         daystarts = list(range(hours[period]))[::24]
         ##### Reservoir
@@ -405,7 +405,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                     # (respower[res,period,hour] + spillpower[res,period,hour]
                     ### NEW: only power can meet min (makes more sense, especially since
                     ### we already allow for the low-availabilty times)
-                    (respower[res,period,hour] 
+                    (respower[res,period,hour]
                     ### The min() is required to deal with cases when the historical
                     ### generation is less than Pmin*cap
                     ) >= min(reshydros[res].capacity_bound_hi * reshydros[res].gen_min,
@@ -421,7 +421,7 @@ def cem(system, return_model=False, solver=None, hours=None,
             else:
                 ### Ramp up
                 for hour in range(1, hours[period]+1):
-                    model += (respower[res,period,hour] - respower[res,period,hour-1] 
+                    model += (respower[res,period,hour] - respower[res,period,hour-1]
                               <= reshydros[res].capacity_bound_hi * reshydros[res].ramp_up)
                 ### Ramp down
                 for hour in range(1, hours[period]+1):
@@ -433,11 +433,11 @@ def cem(system, return_model=False, solver=None, hours=None,
     ##### CO2 cap
     if system.has_co2cap:
         model += (
-            pulp.lpSum([genpower[gen,period,hour] * gens[gen].emissionsrate 
+            pulp.lpSum([genpower[gen,period,hour] * gens[gen].emissionsrate
                         for gen in gens for period in periods for hour in range(hours[period])])
-        ) <= load_cumulative * system.co2cap, 'co2cap' ### GWh * tons/GWh == tons        
+        ) <= load_cumulative * system.co2cap, 'co2cap' ### GWh * tons/GWh == tons
 
-    
+
     ##### RPS
     if system.has_rps:
         ### VRE gen >= RPS formulation: worried that storage could be used to soak up
@@ -449,11 +449,11 @@ def cem(system, return_model=False, solver=None, hours=None,
         ### non-VRE gen <= RPS formulation: should meet RPS without incentivizing
         ### waste of VRE energy through storage charge/discharge
         model += (
-            pulp.lpSum([genpower[gen,period,hour] 
+            pulp.lpSum([genpower[gen,period,hour]
                         for gen in gens for period in periods for hour in range(hours[period])
                         if gens[gen].meets_rps is False])
         ) <= load_cumulative * (1 - system.rps), 'rps' ### GWh * fraction == GWh
-    
+
     ##### Reserves
     if system.has_reserves:
         for period in periods:
@@ -464,7 +464,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                 load: system.reservefraction * loads[period][load] for load in loads[period]
             }
             ##### Enforce availability of reserves in all hours
-            for node in loads[period]: ### Load is labeled by node name 
+            for node in loads[period]: ### Load is labeled by node name
                 for hour in range(hours[period]):
                     model += (
                         ### Generators
@@ -483,7 +483,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                         ##### Transmission
                         ### Forward flow in lines starting at node; no losses (save for end)
                         - pulp.lpSum(
-                            [flowposreserves[line,period,hour] 
+                            [flowposreserves[line,period,hour]
                              for line in lines if lines[line].node1 == node])
                         ### Reverse flow in lines starting at node; subject to losses
                         + pulp.lpSum(
@@ -513,7 +513,7 @@ def cem(system, return_model=False, solver=None, hours=None,
                     ### Intermittent resources
                     else:
                         model += genreserves[gen,period,hour] <= (
-                            gencap[gen] * gens[gen].availability[period][hour] 
+                            gencap[gen] * gens[gen].availability[period][hour]
                             - genpower[gen,period,hour])
                     ### Ramp up rate, if necessary
                     if not gens[gen].perfectly_rampable:
@@ -525,17 +525,17 @@ def cem(system, return_model=False, solver=None, hours=None,
                     ### Storage can provide reserves by increasing hourly discharge
                     ### or by descreasing hourly charge
                     model += storreserves[stor,period,hour] <= (
-                        storcap_P[stor] 
+                        storcap_P[stor]
                         - stordischarge[stor,period,hour] + storcharge[stor,period,hour])
                     ### Energy constraint
                     ### If storage is discharging/charging in a given hour,
                     ### that affects the amount of energy available for providing reserves.
                     ### Essentially should treat reserves like discharge - both get a 1/eta.
                     model += storreserves[stor,period,hour] <= stors[stor].efficiency_discharge * (
-                        storenergy[stor,period,hour] 
+                        storenergy[stor,period,hour]
                         - stordischarge[stor,period,hour] * (1/stors[stor].efficiency_discharge)
                         + storcharge[stor,period,hour] * stors[stor].efficiency_charge)
-                
+
                 ##### Constrain reserve variables for hydro
                 for res in reshydros:
                     model += resreserves[res,period,hour] <= spillpower[res,period,hour]
@@ -578,7 +578,7 @@ def cem(system, return_model=False, solver=None, hours=None,
     ###### Return model if desired
     if return_model:
         return model
-    
+
     ###### Report a few things
     time_setup = toc-tic
     if verbose == True:
@@ -588,7 +588,7 @@ def cem(system, return_model=False, solver=None, hours=None,
         print('{} constraints'.format(len(model.constraints)))
         print('{:.2f} seconds to set up'.format(time_setup))
         sys.stdout.flush()
-    
+
     ##################
     ###### Solve model
     tic = time.perf_counter()
@@ -603,7 +603,7 @@ def cem(system, return_model=False, solver=None, hours=None,
     ### Return nothing if no solution
     if model.status == 0:
         return None
-    
+
     ########## Extract output
     ###### Static variables
     output_capacity = {
@@ -621,19 +621,19 @@ def cem(system, return_model=False, solver=None, hours=None,
     ###### Hourly variables
     output_operation = {
         period: {
-            **{gen: [genpower[gen,period,hour].varValue 
+            **{gen: [genpower[gen,period,hour].varValue
                      for hour in range(hours[period]+1)] for gen in gens},
-            **{stor+'_charge': [-storcharge[stor,period,hour].varValue 
+            **{stor+'_charge': [-storcharge[stor,period,hour].varValue
                                 for hour in range(hours[period]+1)] for stor in stors},
-            **{stor+'_discharge': [stordischarge[stor,period,hour].varValue 
+            **{stor+'_discharge': [stordischarge[stor,period,hour].varValue
                                    for hour in range(hours[period]+1)] for stor in stors},
-            **{stor+'_energy': [storenergy[stor,period,hour].varValue 
+            **{stor+'_energy': [storenergy[stor,period,hour].varValue
                                 for hour in range(hours[period]+1)] for stor in stors},
             **{res+'_power': [respower[res,period,hour].varValue
                               for hour in range(hours[period]+1)] for res in reshydros},
             **{res+'_spill': [spillpower[res,period,hour].varValue
                               for hour in range(hours[period]+1)] for res in reshydros},
-            **{'Load_'+load: [loads[period][load][hour] 
+            **{'Load_'+load: [loads[period][load][hour]
                       for hour in range(hours[period])]+[np.nan] for load in loads[period]},
             **{line+'_pos': [flowpos[line,period,hour].varValue
                              for hour in range(hours[period]+1)] for line in lines},
@@ -641,24 +641,68 @@ def cem(system, return_model=False, solver=None, hours=None,
                              for hour in range(hours[period]+1)] for line in lines},
         } for period in periods}
     ### Reserves
-    if system.has_reserves: 
+    if system.has_reserves:
         output_reserves = {
             period: {
-                **{gen: [genreserves[gen,period,hour].varValue 
+                **{gen: [genreserves[gen,period,hour].varValue
                          for hour in range(hours[period]+1)] for gen in gens},
-                **{stor: [storreserves[stor,period,hour].varValue 
+                **{stor: [storreserves[stor,period,hour].varValue
                           for hour in range(hours[period]+1)] for stor in stors},
-                **{res: [resreserves[res,period,hour].varValue 
+                **{res: [resreserves[res,period,hour].varValue
                          for hour in range(hours[period]+1)] for res in reshydros},
             } for period in periods}
-    
+
+    ### Objective function components
+    cost_fixed = sum(
+        ##### Generators
+        ### Capacity and FOM cost
+        [gencap[gen].varValue * (gens[gen].cost_annual + gens[gen].cost_fom) * years
+         for gen in gens]
+        ##### Storages
+        ### Power capacity and FOM cost
+        + [storcap_P[stor].varValue
+           * (stors[stor].cost_annual_P + stors[stor].cost_fom_P) * years
+           for stor in stors]
+        ### Energy capacity
+        + [storcap_E[stor].varValue
+           * (stors[stor].cost_annual_E + stors[stor].cost_fom_E) * years
+           for stor in stors]
+        ##### Reservoir hydros (NOTE: Take power capacity as fixed)
+        ### Capacity and FOM cost
+        + [reshydros[res].capacity_bound_hi
+           * (reshydros[res].cost_annual + reshydros[res].cost_fom) * years
+           for res in reshydros]
+        ##### Transmission capacity; new build
+        + [newlinecap[line].varValue
+           * (lines[line].cost_annual + lines[line].cost_fom) * years
+           for line in newlines]
+    )
+    cost_variable = sum(
+        ### Generator VOM and fuel cost
+        [genpower[gen,period,hour].varValue
+         * (gens[gen].cost_vom + gens[gen].cost_fuel + gens[gen].cost_emissions)
+         for gen in gens for period in periods for hour in range(hours[period])]
+        ### Storage VOM cost (only applied to discharge)
+        + [stordischarge[stor,period,hour].varValue * stors[stor].cost_vom
+           for stor in stors for period in periods for hour in range(hours[period])]
+        ### Hydro VOM cost
+        + [respower[res,period,hour].varValue * reshydros[res].cost_vom
+           for res in reshydros for period in periods for hour in range(hours[period])]
+        #### Transmission VOM
+        + [flowpos[line,period,hour].varValue * lines[line].cost_vom
+           + flowneg[line,period,hour].varValue * lines[line].cost_vom
+           for line in lines for period in periods for hour in range(hours[period])]
+    )
+
     ###### Other values
     output_values = {
         'objective': pulp.value(model.objective),
-        'co2shadowprice': (-model.constraints['co2cap'].__dict__['pi']*1E6 
+        'objective_fixed': cost_fixed,
+        'objective_variable': cost_variable,
+        'co2shadowprice': (-model.constraints['co2cap'].__dict__['pi']*1E6
                            if system.has_co2cap else 0),
         ### LCOE in $/MWh
-        'lcoe': pulp.value(model.objective) * 1000 / load_cumulative, 
+        'lcoe': pulp.value(model.objective) * 1000 / load_cumulative,
         'co2rate':  sum(
             [(np.array(output_operation[period][gen]) * gens[gen].emissionsrate).sum()
              for period in periods for gen in gens]
@@ -677,13 +721,13 @@ def cem(system, return_model=False, solver=None, hours=None,
         dfdual = pd.DataFrame(
             index=model.constraints.keys(),
             data={
-                'pi': [model.modifiedConstraints[i].pi 
+                'pi': [model.modifiedConstraints[i].pi
                        for i in range(len(model.modifiedConstraints))],
-                'slack': [model.modifiedConstraints[i].slack 
+                'slack': [model.modifiedConstraints[i].slack
                           for i in range(len(model.modifiedConstraints))],
             }
         )
-    
+
     ###### Format output
     if includedual is False:
         out = (output_capacity, output_operation, output_values, system)
@@ -695,7 +739,7 @@ def cem(system, return_model=False, solver=None, hours=None,
             out = (output_capacity, output_operation, output_values, output_reserves, system)
         elif includedual is True:
             out = (output_capacity, output_operation, output_values, output_reserves, system, dfdual)
-        
+
     ###### Save outputs if desired
     if savename is None:
         pass
